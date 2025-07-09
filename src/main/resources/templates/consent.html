@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consent Request</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .client-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .resource-list {
+            margin-bottom: 20px;
+        }
+        .resource-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+        }
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn-approve {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-deny {
+            background-color: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Authorization Request</h1>
+        
+        <div class="client-info">
+            <h2>Client Information</h2>
+            <p><strong>Client:</strong> <span th:text="${grant.client != null ? grant.client.displayName : 'Unknown Client'}">Client Name</span></p>
+            <p><strong>Request ID:</strong> <span th:text="${grant.id}">Grant ID</span></p>
+        </div>
+        
+        <div class="resource-list">
+            <h2>Requested Access</h2>
+            <div th:if="${grant.resources.empty}">
+                <p>No specific resources requested.</p>
+            </div>
+            <div th:each="resource : ${grant.resources}" class="resource-item">
+                <p><strong>Type:</strong> <span th:text="${resource.type}">Resource Type</span></p>
+                <p th:if="${resource.actions != null}"><strong>Actions:</strong> <span th:text="${resource.actions}">Actions</span></p>
+                <p th:if="${resource.locations != null}"><strong>Locations:</strong> <span th:text="${resource.locations}">Locations</span></p>
+                <p th:if="${resource.dataTypes != null}"><strong>Data Types:</strong> <span th:text="${resource.dataTypes}">Data Types</span></p>
+            </div>
+        </div>
+        
+        <p>Do you approve this authorization request?</p>
+        
+        <form th:action="@{/gnap/interact/consent/{grantId}(grantId=${grant.id})}" method="post">
+            <div class="buttons">
+                <button type="submit" name="approved" value="true" class="btn btn-approve">Approve</button>
+                <button type="submit" name="approved" value="false" class="btn btn-deny">Deny</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
