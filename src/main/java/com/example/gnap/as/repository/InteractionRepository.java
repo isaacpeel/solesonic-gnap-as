@@ -22,6 +22,7 @@ public interface InteractionRepository extends JpaRepository<Interaction, String
      * @param grantId the grant ID
      * @return the list of interactions
      */
+    @SuppressWarnings("unused")
     List<Interaction> findByGrantId(UUID grantId);
     
     /**
@@ -30,6 +31,7 @@ public interface InteractionRepository extends JpaRepository<Interaction, String
      * @param interactionType the interaction type
      * @return the list of interactions
      */
+    @SuppressWarnings("unused")
     List<Interaction> findByInteractionType(InteractionType interactionType);
     
     /**
@@ -38,6 +40,7 @@ public interface InteractionRepository extends JpaRepository<Interaction, String
      * @param nonce the nonce
      * @return the interaction if found
      */
+    @SuppressWarnings("unused")
     Optional<Interaction> findByNonce(String nonce);
     
     /**
