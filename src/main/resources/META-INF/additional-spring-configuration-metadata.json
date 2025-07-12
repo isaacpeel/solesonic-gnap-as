@@ -1,0 +1,23 @@
+{
+  "properties": [
+    {
+      "name": "gnap.as.jwks.keystore-location",
+      "type": "java.lang.String",
+      "description": "The file path location of the Java KeyStore (JKS) containing the JSON Web Key Set (JWKS) used for signing tokens."
+    },
+    {
+      "name": "gnap.as.jwks.keystore-password",
+      "type": "java.lang.String",
+      "description": "The password used to access the Java KeyStore (JKS) file containing the JWKS keys."
+    },
+    {
+      "name": "gnap.as.jwks.key-alias",
+      "type": "java.lang.String",
+      "description": "The alias (name) of the specific key within the KeyStore that should be used for signing GNAP tokens."
+    },
+    {
+      "name": "gnap.as.jwks.key-password",
+      "type": "java.lang.String",
+      "description": "The password used to access the specific key identified by key-alias within the KeyStore for signing operations."
+    }
+  ] }

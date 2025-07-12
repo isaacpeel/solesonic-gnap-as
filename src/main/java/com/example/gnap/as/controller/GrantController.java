@@ -1,11 +1,10 @@
 package com.example.gnap.as.controller;
 
-import com.example.gnap.as.dto.GrantRequestDto;
-import com.example.gnap.as.dto.GrantResponseDto;
+import com.example.gnap.as.model.GrantRequest;
 import com.example.gnap.as.service.GrantService;
 import com.example.gnap.as.service.TokenService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,25 +14,30 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/gnap")
-@RequiredArgsConstructor
-@Slf4j
 public class GrantController {
+
+    private static final Logger log = LoggerFactory.getLogger(GrantController.class);
 
     private final GrantService grantService;
     private final TokenService tokenService;
 
+    public GrantController(GrantService grantService, TokenService tokenService) {
+        this.grantService = grantService;
+        this.tokenService = tokenService;
+    }
+
     /**
      * Process a grant request.
      *
-     * @param requestDto the grant request DTO
-     * @return the grant response DTO
+     * @param request the grant request
+     * @return the grant response
      */
     @PostMapping("/grant")
-    public ResponseEntity<GrantResponseDto> processGrantRequest(@RequestBody GrantRequestDto requestDto) {
-        log.info("Received grant request: {}", requestDto);
+    public ResponseEntity<GrantRequest> processGrantRequest(@RequestBody GrantRequest request) {
+        log.info("Received grant request: {}", request);
         try {
-            GrantResponseDto responseDto = grantService.processGrantRequest(requestDto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
+            GrantRequest response = grantService.processGrantRequest(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException e) {
             log.error("Error processing grant request", e);
             return ResponseEntity.badRequest().build();
@@ -48,18 +52,18 @@ public class GrantController {
      *
      * @param grantId the grant ID
      * @param authorization the authorization header containing the continuation token
-     * @return the grant response DTO
+     * @return the grant response
      */
     @GetMapping("/grant/{grantId}")
-    public ResponseEntity<GrantResponseDto> processContinuation(
+    public ResponseEntity<GrantRequest> processContinuation(
             @PathVariable String grantId,
             @RequestHeader("Authorization") String authorization) {
         log.info("Received continuation request for grant: {}", grantId);
         try {
             // Extract token from Authorization header
             String token = authorization.replace("Bearer ", "");
-            GrantResponseDto responseDto = grantService.processContinuation(grantId, token);
-            return ResponseEntity.ok(responseDto);
+            GrantRequest response = grantService.processContinuation(grantId, token);
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             log.error("Error processing continuation request", e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -88,7 +92,7 @@ public class GrantController {
             String token = authorization.replace("Bearer ", "");
 
             // Validate token
-            if (!tokenService.validateContinuationToken(grantId, token)) {
+            if (tokenService.validateContinuationToken(grantId, token)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
 
@@ -110,9 +114,9 @@ public class GrantController {
      * @param status the status string
      * @return the GrantStatus enum
      */
-    private com.example.gnap.as.model.GrantRequest.GrantStatus parseStatus(String status) {
+    private GrantRequest.GrantStatus parseStatus(String status) {
         try {
-            return com.example.gnap.as.model.GrantRequest.GrantStatus.valueOf(status.toUpperCase());
+            return GrantRequest.GrantStatus.valueOf(status.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid status: " + status);
         }

@@ -8,17 +8,27 @@
         <version>3.5.3</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.example</groupId>
+    <groupId>com.solesonic</groupId>
     <artifactId>gnap-as</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>gnap-as</name>
-    <description>gnap-as</description>
+    <name>solesonic-gnap-as</name>
+    <description>solesonic-gnap-as</description>
     <url/>
     <licenses>
-        <license/>
+        <license>
+            <name>GNU General Public License v3.0</name>
+            <url>https://www.gnu.org/licenses/gpl-3.0.en.html</url>
+            <distribution>repo</distribution>
+            <comments>GPL-3.0 license</comments>
+        </license>
     </licenses>
     <developers>
-        <developer/>
+        <developer>
+            <name>Isaac Peel</name>
+            <email>isaac@solesonic.com</email>
+            <organization>Solesonic</organization>
+            <organizationUrl>https://solesonic.com</organizationUrl>
+        </developer>
     </developers>
     <scm>
         <connection/>
@@ -27,7 +37,7 @@
         <url/>
     </scm>
     <properties>
-        <java.version>17</java.version>
+        <java.version>24</java.version>
     </properties>
     <dependencies>
         <dependency>
@@ -59,18 +69,18 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.6</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.6</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.6</version>
             <scope>runtime</scope>
         </dependency>
 
@@ -78,15 +88,9 @@
         <dependency>
             <groupId>com.nimbusds</groupId>
             <artifactId>nimbus-jose-jwt</artifactId>
-            <version>9.31</version>
+            <version>10.3.1</version>
         </dependency>
 
-        <!-- Lombok for reducing boilerplate code -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
 
         <!-- H2 for development -->
         <dependency>

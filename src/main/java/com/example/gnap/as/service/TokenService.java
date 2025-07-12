@@ -1,7 +1,5 @@
 package com.example.gnap.as.service;
 
-import com.example.gnap.as.dto.GrantResponseDto;
-import com.example.gnap.as.dto.TokenIntrospectionDto;
 import com.example.gnap.as.model.AccessToken;
 import com.example.gnap.as.model.GrantRequest;
 import com.example.gnap.as.model.Resource;
@@ -10,8 +8,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,9 +24,9 @@ import java.util.stream.Collectors;
  * Service for token management in the GNAP protocol.
  */
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class TokenService {
+
+    private static final Logger log = LoggerFactory.getLogger(TokenService.class);
 
     private final AccessTokenRepository accessTokenRepository;
 
@@ -40,6 +38,10 @@ public class TokenService {
 
     // In a production environment, this would be stored securely and not generated on startup
     private final SecretKey jwtKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+
+    public TokenService(AccessTokenRepository accessTokenRepository) {
+        this.accessTokenRepository = accessTokenRepository;
+    }
 
     /**
      * Generate a continuation token for a grant.
@@ -73,12 +75,11 @@ public class TokenService {
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
-            
-            return claims.getSubject().equals(grantId) &&
-                   "continuation".equals(claims.get("token_type"));
+
+            return !claims.getSubject().equals(grantId) || !"continuation".equals(claims.get("token_type"));
         } catch (Exception e) {
             log.error("Error validating continuation token", e);
-            return false;
+            return true;
         }
     }
 
@@ -86,24 +87,23 @@ public class TokenService {
      * Generate access tokens for a grant.
      *
      * @param grant the grant
-     * @return the list of access token DTOs
+     * @return the list of access tokens
      */
     @Transactional
-    public List<GrantResponseDto.AccessTokenDto> generateAccessTokens(GrantRequest grant) {
-        List<GrantResponseDto.AccessTokenDto> accessTokenDtos = new ArrayList<>();
-        
+    public List<AccessToken> generateAccessTokens(GrantRequest grant) {
+        List<AccessToken> accessTokens = new ArrayList<>();
+
         // Group resources by resource server
         Map<String, List<Resource>> resourcesByServer = grant.getResources().stream()
                 .collect(Collectors.groupingBy(
                         resource -> resource.getResourceServer() != null ? resource.getResourceServer() : "default"
                 ));
-        
+
         // Generate an access token for each resource server
-        int index = 0;
         for (Map.Entry<String, List<Resource>> entry : resourcesByServer.entrySet()) {
             String resourceServer = entry.getKey();
             List<Resource> resources = entry.getValue();
-            
+
             // Create the access token entity
             AccessToken accessToken = new AccessToken();
             accessToken.setId(UUID.randomUUID().toString());
@@ -111,30 +111,21 @@ public class TokenService {
             accessToken.setAccessType("bearer");
             accessToken.setResourceServer(resourceServer);
             accessToken.setExpiresAt(LocalDateTime.now().plusSeconds(tokenLifetime));
-            
+
             // Generate the JWT token
             String tokenValue = generateJwtToken(grant, resources, resourceServer);
             accessToken.setTokenValue(tokenValue);
-            
+
+            // Set additional properties for API
+            accessToken.setLabel(resourceServer);
+            accessToken.setAccess(new ArrayList<>(resources));
+
             // Save the access token
             accessTokenRepository.save(accessToken);
-            
-            // Create the access token DTO
-            GrantResponseDto.AccessTokenDto accessTokenDto = new GrantResponseDto.AccessTokenDto();
-            accessTokenDto.setValue(tokenValue);
-            accessTokenDto.setIndex(index++);
-            accessTokenDto.setLabel(resourceServer);
-            accessTokenDto.setExpires_in(tokenLifetime);
-            
-            // Add access rights to the token
-            accessTokenDto.setAccess(resources.stream()
-                    .map(this::convertResourceToAccessDto)
-                    .collect(Collectors.toList()));
-            
-            accessTokenDtos.add(accessTokenDto);
+            accessTokens.add(accessToken);
         }
-        
-        return accessTokenDtos;
+
+        return accessTokens;
     }
 
     /**
@@ -148,39 +139,42 @@ public class TokenService {
     private String generateJwtToken(GrantRequest grant, List<Resource> resources, String resourceServer) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("grant_id", grant.getId());
-        
+
         if (grant.getClient() != null) {
             claims.put("client_id", grant.getClient().getId());
         }
-        
+
         if (grant.getUserId() != null) {
             claims.put("sub", grant.getUserId());
         }
-        
+
         // Add resource scopes
         List<Map<String, Object>> scopes = resources.stream()
                 .map(resource -> {
                     Map<String, Object> scope = new HashMap<>();
                     scope.put("type", resource.getType());
-                    
-                    if (resource.getActions() != null) {
-                        scope.put("actions", Arrays.asList(resource.getActions().split(",")));
+
+                    List<String> actionsList = resource.getActionsList();
+                    if (actionsList != null && !actionsList.isEmpty()) {
+                        scope.put("actions", actionsList);
                     }
-                    
-                    if (resource.getLocations() != null) {
-                        scope.put("locations", Arrays.asList(resource.getLocations().split(",")));
+
+                    List<String> locationsList = resource.getLocationsList();
+                    if (locationsList != null && !locationsList.isEmpty()) {
+                        scope.put("locations", locationsList);
                     }
-                    
-                    if (resource.getDataTypes() != null) {
-                        scope.put("datatypes", Arrays.asList(resource.getDataTypes().split(",")));
+
+                    List<String> dataTypesList = resource.getDataTypesList();
+                    if (dataTypesList != null && !dataTypesList.isEmpty()) {
+                        scope.put("datatypes", dataTypesList);
                     }
-                    
+
                     return scope;
                 })
                 .collect(Collectors.toList());
-        
+
         claims.put("access", scopes);
-        
+
         return Jwts.builder()
                 .setClaims(claims)
                 .setIssuer(issuer)
@@ -193,84 +187,57 @@ public class TokenService {
     }
 
     /**
-     * Convert a resource entity to an access DTO.
-     *
-     * @param resource the resource entity
-     * @return the access DTO
-     */
-    private com.example.gnap.as.dto.GrantRequestDto.AccessDto convertResourceToAccessDto(Resource resource) {
-        com.example.gnap.as.dto.GrantRequestDto.AccessDto accessDto = new com.example.gnap.as.dto.GrantRequestDto.AccessDto();
-        accessDto.setType(resource.getType());
-        accessDto.setResourceServer(resource.getResourceServer());
-        
-        if (resource.getActions() != null) {
-            accessDto.setActions(Arrays.asList(resource.getActions().split(",")));
-        }
-        
-        if (resource.getLocations() != null) {
-            accessDto.setLocations(Arrays.asList(resource.getLocations().split(",")));
-        }
-        
-        if (resource.getDataTypes() != null) {
-            accessDto.setDataTypes(Arrays.asList(resource.getDataTypes().split(",")));
-        }
-        
-        return accessDto;
-    }
-
-    /**
      * Introspect a token.
      *
      * @param token the token
-     * @return the token introspection DTO
+     * @return the access token with introspection information
      */
     @Transactional(readOnly = true)
-    public TokenIntrospectionDto introspectToken(String token) {
-        Optional<AccessToken> accessToken = accessTokenRepository.findByTokenValue(token);
-        
-        if (accessToken.isEmpty()) {
-            TokenIntrospectionDto introspectionDto = new TokenIntrospectionDto();
-            introspectionDto.setActive(false);
-            return introspectionDto;
+    public AccessToken introspectToken(String token) {
+        Optional<AccessToken> accessTokenOpt = accessTokenRepository.findByTokenValue(token);
+
+        if (accessTokenOpt.isEmpty()) {
+            AccessToken inactiveToken = new AccessToken();
+            // Set a transient field to indicate the token is inactive
+            Map<String, Object> parameters = new HashMap<>();
+            parameters.put("active", false);
+            inactiveToken.setParameters(parameters);
+            return inactiveToken;
         }
-        
-        AccessToken at = accessToken.get();
-        
+
+        AccessToken accessToken = accessTokenOpt.get();
+
         // Check if token has expired
-        if (at.getExpiresAt().isBefore(LocalDateTime.now())) {
-            TokenIntrospectionDto introspectionDto = new TokenIntrospectionDto();
-            introspectionDto.setActive(false);
-            return introspectionDto;
+        if (accessToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            Map<String, Object> parameters = new HashMap<>();
+            parameters.put("active", false);
+            accessToken.setParameters(parameters);
+            return accessToken;
         }
-        
+
         // Build introspection response
-        TokenIntrospectionDto introspectionDto = new TokenIntrospectionDto();
-        introspectionDto.setActive(true);
-        introspectionDto.setGrantId(at.getGrant().getId());
-        
-        if (at.getGrant().getClient() != null) {
-            introspectionDto.setClientId(at.getGrant().getClient().getId());
+        Map<String, Object> parameters = new HashMap<>();
+        parameters.put("active", true);
+        parameters.put("grant_id", accessToken.getGrant().getId());
+
+        if (accessToken.getGrant().getClient() != null) {
+            parameters.put("client_id", accessToken.getGrant().getClient().getId());
         }
-        
-        // Calculate expires_in in seconds
-        long expiresIn = at.getExpiresAt().atZone(ZoneId.systemDefault()).toEpochSecond() -
-                LocalDateTime.now().atZone(ZoneId.systemDefault()).toEpochSecond();
-        introspectionDto.setExpiresIn((int) expiresIn);
-        
+
         // Set issued at time
-        introspectionDto.setIssuedAt(at.getCreatedAt().atZone(ZoneId.systemDefault()).toEpochSecond());
-        
+        parameters.put("iat", accessToken.getCreatedAt().atZone(ZoneId.systemDefault()).toEpochSecond());
+
+        accessToken.setParameters(parameters);
+
         // Add access rights
-        List<Resource> resources = at.getGrant().getResources().stream()
-                .filter(r -> at.getResourceServer() == null ||
-                        at.getResourceServer().equals(r.getResourceServer()))
+        List<Resource> resources = accessToken.getGrant().getResources().stream()
+                .filter(r -> accessToken.getResourceServer() == null ||
+                        accessToken.getResourceServer().equals(r.getResourceServer()))
                 .collect(Collectors.toList());
-        
-        introspectionDto.setAccess(resources.stream()
-                .map(this::convertResourceToAccessDto)
-                .collect(Collectors.toList()));
-        
-        return introspectionDto;
+
+        accessToken.setAccess(resources);
+
+        return accessToken;
     }
 
     /**
@@ -282,11 +249,11 @@ public class TokenService {
     @Transactional
     public boolean revokeToken(String token) {
         Optional<AccessToken> accessToken = accessTokenRepository.findByTokenValue(token);
-        
+
         if (accessToken.isEmpty()) {
             return false;
         }
-        
+
         accessTokenRepository.delete(accessToken.get());
         return true;
     }

@@ -1,42 +1,42 @@
 package com.example.gnap.as.service;
 
-import com.example.gnap.as.dto.GrantRequestDto;
-import com.example.gnap.as.dto.GrantResponseDto;
-import com.example.gnap.as.model.*;
+import com.example.gnap.as.model.Client;
+import com.example.gnap.as.model.GrantRequest;
+import com.example.gnap.as.model.Interaction;
+import com.example.gnap.as.model.Resource;
 import com.example.gnap.as.repository.GrantRequestRepository;
-import com.example.gnap.as.repository.ResourceRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Service for grant management in the GNAP protocol.
  */
 @Service
-@Slf4j
 public class GrantService {
 
+    private static final Logger log = LoggerFactory.getLogger(GrantService.class);
+
     private final GrantRequestRepository grantRequestRepository;
-    private final ResourceRepository resourceRepository;
     private final ClientService clientService;
     private final InteractionService interactionService;
     private final TokenService tokenService;
 
     public GrantService(
             GrantRequestRepository grantRequestRepository,
-            ResourceRepository resourceRepository,
             ClientService clientService,
             @Lazy InteractionService interactionService,
             @Lazy TokenService tokenService) {
         this.grantRequestRepository = grantRequestRepository;
-        this.resourceRepository = resourceRepository;
         this.clientService = clientService;
         this.interactionService = interactionService;
         this.tokenService = tokenService;
@@ -51,35 +51,35 @@ public class GrantService {
     /**
      * Process a grant request.
      *
-     * @param requestDto the grant request DTO
-     * @return the grant response DTO
+     * @param request the grant request
+     * @return the grant response
      */
     @Transactional
-    public GrantResponseDto processGrantRequest(GrantRequestDto requestDto) {
+    public GrantRequest processGrantRequest(GrantRequest request) {
         // Authenticate client if provided
         Client client = null;
-        if (requestDto.getClient() != null) {
-            if (!clientService.authenticateClient(requestDto.getClient())) {
+        if (request.getClient() != null) {
+            if (!clientService.authenticateClient(request.getClient())) {
                 throw new IllegalArgumentException("Client authentication failed");
             }
-            client = clientService.registerClient(requestDto.getClient());
+            client = clientService.registerClient(request.getClient());
         }
 
         // Create grant request
-        GrantRequest grant = createGrantRequest(requestDto, client);
+        GrantRequest grant = createGrantRequest(request, client);
 
         // Create resources
-        if (requestDto.getAccess() != null) {
-            for (GrantRequestDto.AccessDto accessDto : requestDto.getAccess()) {
-                Resource resource = createResource(accessDto, grant);
-                grant.addResource(resource);
+        if (request.getResources() != null && !request.getResources().isEmpty()) {
+            for (Resource resource : request.getResources()) {
+                Resource newResource = createResource(resource, grant);
+                grant.addResource(newResource);
             }
         }
 
         // Create interactions if needed
         List<Interaction> interactions = new ArrayList<>();
-        if (requestDto.getInteract() != null) {
-            interactions = interactionService.createInteractions(requestDto.getInteract(), grant);
+        if (request.getInteractInfo() != null) {
+            interactions = interactionService.createInteractions(request.getInteractInfo(), grant);
             for (Interaction interaction : interactions) {
                 grant.addInteraction(interaction);
             }
@@ -93,13 +93,13 @@ public class GrantService {
     }
 
     /**
-     * Create a grant request entity from a DTO.
+     * Create a grant request entity.
      *
-     * @param requestDto the grant request DTO
+     * @param request the grant request
      * @param client the client
      * @return the grant request entity
      */
-    private GrantRequest createGrantRequest(GrantRequestDto requestDto, Client client) {
+    private GrantRequest createGrantRequest(GrantRequest request, Client client) {
         GrantRequest grant = new GrantRequest();
         grant.setId(UUID.randomUUID().toString());
         grant.setClient(client);
@@ -110,77 +110,70 @@ public class GrantService {
         grant.setExpiresAt(expiresAt);
 
         // Set redirect URI if provided in interact
-        if (requestDto.getInteract() != null && requestDto.getInteract().getRedirect() != null) {
-            grant.setRedirectUri(requestDto.getInteract().getRedirect().getUri());
+        if (request.getInteractInfo() != null && request.getInteractInfo().getRedirect() != null) {
+            grant.setRedirectUri(request.getInteractInfo().getRedirect());
         }
 
         // Set state if provided
-        if (requestDto.getState() != null) {
-            grant.setState(requestDto.getState().toString());
+        if (request.getStateMap() != null) {
+            grant.setState(request.getStateMap().toString());
         }
 
         return grant;
     }
 
     /**
-     * Create a resource entity from an access DTO.
+     * Create a resource entity.
      *
-     * @param accessDto the access DTO
+     * @param resource the resource
      * @param grant the grant request
      * @return the resource entity
      */
-    private Resource createResource(GrantRequestDto.AccessDto accessDto, GrantRequest grant) {
-        Resource resource = new Resource();
-        resource.setId(UUID.randomUUID().toString());
-        resource.setGrant(grant);
-        resource.setType(accessDto.getType());
-        resource.setResourceServer(accessDto.getResourceServer());
+    private Resource createResource(Resource resource, GrantRequest grant) {
+        Resource newResource = new Resource();
+        newResource.setId(UUID.randomUUID().toString());
+        newResource.setGrant(grant);
+        newResource.setType(resource.getType());
+        newResource.setResourceServer(resource.getResourceServer());
 
-        // Convert lists to comma-separated strings
-        if (accessDto.getActions() != null) {
-            resource.setActions(String.join(",", accessDto.getActions()));
-        }
+        // Set actions, locations, and dataTypes
+        newResource.setActionsList(resource.getActionsList());
+        newResource.setLocationsList(resource.getLocationsList());
+        newResource.setDataTypesList(resource.getDataTypesList());
 
-        if (accessDto.getLocations() != null) {
-            resource.setLocations(String.join(",", accessDto.getLocations()));
-        }
-
-        if (accessDto.getDataTypes() != null) {
-            resource.setDataTypes(String.join(",", accessDto.getDataTypes()));
-        }
-
-        return resource;
+        return newResource;
     }
 
     /**
-     * Build a grant response DTO from a grant request entity.
+     * Build a grant response from a grant request entity.
      *
      * @param grant the grant request entity
      * @param interactions the interactions
-     * @return the grant response DTO
+     * @return the grant response
      */
-    private GrantResponseDto buildGrantResponse(GrantRequest grant, List<Interaction> interactions) {
-        GrantResponseDto responseDto = new GrantResponseDto();
-        responseDto.setInstanceId(grant.getId());
+    private GrantRequest buildGrantResponse(GrantRequest grant, List<Interaction> interactions) {
+        // Create a new GrantRequest for the response
+        GrantRequest response = new GrantRequest();
+        response.setId(grant.getId());
 
         // Add continue information
-        GrantResponseDto.ContinueDto continueDto = new GrantResponseDto.ContinueDto();
-        continueDto.setUri("/gnap/grant/" + grant.getId());
-        continueDto.setAccess_token(tokenService.generateContinuationToken(grant));
-        continueDto.setWait(5); // Suggest client to wait 5 seconds before polling
-        responseDto.setContinue_(continueDto);
+        GrantRequest.ContinueInfo continueInfo = new GrantRequest.ContinueInfo();
+        continueInfo.setUri("/gnap/grant/" + grant.getId());
+        continueInfo.setAccessToken(tokenService.generateContinuationToken(grant));
+        continueInfo.setWait(5); // Suggest client to wait 5 seconds before polling
+        response.setContinueInfo(continueInfo);
 
         // Add interaction information if needed
         if (!interactions.isEmpty()) {
-            responseDto.setInteract(interactionService.buildInteractResponse(interactions));
+            response.setInteractInfo(interactionService.buildInteractResponse(interactions));
         }
 
         // Add access tokens if grant is approved
         if (grant.getStatus() == GrantRequest.GrantStatus.APPROVED) {
-            responseDto.setAccess_token(tokenService.generateAccessTokens(grant));
+            response.setAccessTokenList(tokenService.generateAccessTokens(grant));
         }
 
-        return responseDto;
+        return response;
     }
 
     /**
@@ -199,15 +192,14 @@ public class GrantService {
      *
      * @param grantId the grant ID
      * @param status the new status
-     * @return the updated grant
      */
     @Transactional
-    public GrantRequest updateGrantStatus(String grantId, GrantRequest.GrantStatus status) {
+    public void updateGrantStatus(String grantId, GrantRequest.GrantStatus status) {
         GrantRequest grant = grantRequestRepository.findById(grantId)
                 .orElseThrow(() -> new IllegalArgumentException("Grant not found: " + grantId));
 
         grant.setStatus(status);
-        return grantRequestRepository.save(grant);
+        grantRequestRepository.save(grant);
     }
 
     /**
@@ -215,12 +207,12 @@ public class GrantService {
      *
      * @param grantId the grant ID
      * @param continuationToken the continuation token
-     * @return the grant response DTO
+     * @return the grant response
      */
     @Transactional
-    public GrantResponseDto processContinuation(String grantId, String continuationToken) {
+    public GrantRequest processContinuation(String grantId, String continuationToken) {
         // Validate continuation token
-        if (!tokenService.validateContinuationToken(grantId, continuationToken)) {
+        if (tokenService.validateContinuationToken(grantId, continuationToken)) {
             throw new IllegalArgumentException("Invalid continuation token");
         }
 

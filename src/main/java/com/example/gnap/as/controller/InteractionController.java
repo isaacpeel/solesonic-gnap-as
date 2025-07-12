@@ -4,8 +4,8 @@ import com.example.gnap.as.model.GrantRequest;
 import com.example.gnap.as.model.Interaction;
 import com.example.gnap.as.service.GrantService;
 import com.example.gnap.as.service.InteractionService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -21,12 +21,17 @@ import java.util.Optional;
  */
 @Controller
 @RequestMapping("/gnap/interact")
-@RequiredArgsConstructor
-@Slf4j
 public class InteractionController {
+
+    private static final Logger log = LoggerFactory.getLogger(InteractionController.class);
 
     private final InteractionService interactionService;
     private final GrantService grantService;
+
+    public InteractionController(InteractionService interactionService, GrantService grantService) {
+        this.interactionService = interactionService;
+        this.grantService = grantService;
+    }
 
     /**
      * Handle redirect interaction.
@@ -38,23 +43,23 @@ public class InteractionController {
     @GetMapping("/redirect/{grantId}")
     public String handleRedirect(@PathVariable String grantId, Model model) {
         log.info("Received redirect interaction for grant: {}", grantId);
-        
+
         Optional<GrantRequest> grant = grantService.findById(grantId);
         if (grant.isEmpty()) {
             model.addAttribute("error", "Grant not found");
             return "error";
         }
-        
+
         List<Interaction> interactions = interactionService.findActiveInteractions(grantId);
         if (interactions.isEmpty()) {
             model.addAttribute("error", "No active interactions found");
             return "error";
         }
-        
+
         // Add grant and interactions to model for consent page
         model.addAttribute("grant", grant.get());
         model.addAttribute("interactions", interactions);
-        
+
         return "consent";
     }
 
@@ -68,23 +73,23 @@ public class InteractionController {
     @ResponseBody
     public ResponseEntity<AppLaunchInfo> handleApp(@PathVariable String grantId) {
         log.info("Received app interaction for grant: {}", grantId);
-        
+
         Optional<GrantRequest> grant = grantService.findById(grantId);
         if (grant.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        
+
         List<Interaction> interactions = interactionService.findActiveInteractions(grantId);
         if (interactions.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
-        
+
         // Create app launch info
         AppLaunchInfo appLaunchInfo = new AppLaunchInfo();
         appLaunchInfo.setGrantId(grantId);
         appLaunchInfo.setClientName(grant.get().getClient() != null ? 
                 grant.get().getClient().getDisplayName() : "Unknown Client");
-        
+
         return ResponseEntity.ok(appLaunchInfo);
     }
 
@@ -98,24 +103,24 @@ public class InteractionController {
     @GetMapping("/user-code/{grantId}")
     public String handleUserCode(@PathVariable String grantId, Model model) {
         log.info("Received user code interaction for grant: {}", grantId);
-        
+
         Optional<GrantRequest> grant = grantService.findById(grantId);
         if (grant.isEmpty()) {
             model.addAttribute("error", "Grant not found");
             return "error";
         }
-        
+
         List<Interaction> interactions = interactionService.findActiveInteractions(grantId);
         if (interactions.isEmpty()) {
             model.addAttribute("error", "No active interactions found");
             return "error";
         }
-        
+
         // Generate user code
         String userCode = generateUserCode();
         model.addAttribute("userCode", userCode);
         model.addAttribute("grant", grant.get());
-        
+
         return "user-code";
     }
 
@@ -133,20 +138,20 @@ public class InteractionController {
             @RequestParam String interactionId,
             @RequestParam String hash) {
         log.info("Received finish interaction for grant: {}, interaction: {}", grantId, interactionId);
-        
+
         Optional<GrantRequest> grant = grantService.findById(grantId);
         if (grant.isEmpty() || grant.get().getRedirectUri() == null) {
             return new RedirectView("/error?message=Grant+not+found+or+no+redirect+URI");
         }
-        
+
         // Validate interaction
         if (!interactionService.validateInteraction(grantId, interactionId, null)) {
             return new RedirectView("/error?message=Invalid+interaction");
         }
-        
+
         // Update grant status to approved
         grantService.updateGrantStatus(grantId, GrantRequest.GrantStatus.APPROVED);
-        
+
         // Redirect to client with hash
         String redirectUri = grant.get().getRedirectUri();
         if (redirectUri.contains("?")) {
@@ -154,7 +159,7 @@ public class InteractionController {
         } else {
             redirectUri += "?hash=" + hash;
         }
-        
+
         return new RedirectView(redirectUri);
     }
 
@@ -170,22 +175,22 @@ public class InteractionController {
             @PathVariable String grantId,
             @RequestParam boolean approved) {
         log.info("Received consent submission for grant: {}, approved: {}", grantId, approved);
-        
+
         Optional<GrantRequest> grant = grantService.findById(grantId);
         if (grant.isEmpty()) {
             return new RedirectView("/error?message=Grant+not+found");
         }
-        
+
         List<Interaction> interactions = interactionService.findActiveInteractions(grantId);
         if (interactions.isEmpty()) {
             return new RedirectView("/error?message=No+active+interactions+found");
         }
-        
+
         // Update grant status based on consent
         GrantRequest.GrantStatus status = approved ? 
                 GrantRequest.GrantStatus.APPROVED : GrantRequest.GrantStatus.DENIED;
         grantService.updateGrantStatus(grantId, status);
-        
+
         if (approved) {
             // Redirect to finish endpoint
             Interaction interaction = interactions.get(0);

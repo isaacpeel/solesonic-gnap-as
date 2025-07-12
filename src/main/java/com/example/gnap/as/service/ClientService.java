@@ -1,14 +1,20 @@
 package com.example.gnap.as.service;
 
-import com.example.gnap.as.dto.GrantRequestDto;
 import com.example.gnap.as.model.Client;
 import com.example.gnap.as.repository.ClientRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.factories.DefaultJWSVerifierFactory;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jwt.SignedJWT;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.ParseException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,12 +22,17 @@ import java.util.UUID;
  * Service for client management in the GNAP protocol.
  */
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class ClientService {
+
+    private static final Logger log = LoggerFactory.getLogger(ClientService.class);
 
     private final ClientRepository clientRepository;
     private final ObjectMapper objectMapper;
+
+    public ClientService(ClientRepository clientRepository, ObjectMapper objectMapper) {
+        this.clientRepository = clientRepository;
+        this.objectMapper = objectMapper;
+    }
 
     /**
      * Find a client by its instance ID.
@@ -48,88 +59,175 @@ public class ClientService {
     /**
      * Register a new client or update an existing one.
      *
-     * @param clientDto the client information
+     * @param client the client information
      * @return the registered client
      */
     @Transactional
-    public Client registerClient(GrantRequestDto.ClientDto clientDto) {
+    public Client registerClient(Client client) {
         // Check if client already exists by instance ID
         Optional<Client> existingClient = Optional.empty();
-        if (clientDto.getInstanceId() != null) {
-            existingClient = findByInstanceId(clientDto.getInstanceId());
+        if (client.getInstanceId() != null) {
+            existingClient = findByInstanceId(client.getInstanceId());
         }
-        
+
         // Check if client exists by key ID
-        if (existingClient.isEmpty() && clientDto.getKey() != null && clientDto.getKey().getKeyId() != null) {
-            existingClient = findByKeyId(clientDto.getKey().getKeyId());
+        if (existingClient.isEmpty() && client.getKeyId() != null) {
+            existingClient = findByKeyId(client.getKeyId());
         }
-        
+
         // Update existing client or create new one
-        Client client;
+        Client clientToSave;
         if (existingClient.isPresent()) {
-            client = existingClient.get();
-            updateClientFromDto(client, clientDto);
+            clientToSave = existingClient.get();
+            updateClient(clientToSave, client);
         } else {
-            client = createClientFromDto(clientDto);
+            clientToSave = createClient(client);
         }
-        
-        return clientRepository.save(client);
+
+        return clientRepository.save(clientToSave);
     }
 
     /**
-     * Create a new client from a client DTO.
+     * Create a new client.
      *
-     * @param clientDto the client DTO
+     * @param client the client information
      * @return the new client
      */
-    private Client createClientFromDto(GrantRequestDto.ClientDto clientDto) {
-        Client client = new Client();
-        client.setId(UUID.randomUUID().toString());
-        updateClientFromDto(client, clientDto);
-        return client;
+    private Client createClient(Client client) {
+        Client newClient = new Client();
+        newClient.setId(UUID.randomUUID().toString());
+        updateClient(newClient, client);
+        return newClient;
     }
 
     /**
-     * Update a client from a client DTO.
+     * Update a client.
      *
-     * @param client the client to update
-     * @param clientDto the client DTO
+     * @param clientToUpdate the client to update
+     * @param clientData the client data
      */
-    private void updateClientFromDto(Client client, GrantRequestDto.ClientDto clientDto) {
-        client.setInstanceId(clientDto.getInstanceId());
-        
-        if (clientDto.getKey() != null) {
-            client.setKeyId(clientDto.getKey().getKeyId());
-            
-            // Store JWK as JSON string if present
-            if (clientDto.getKey().getJwk() != null) {
-                try {
-                    client.setKeyJwk(objectMapper.writeValueAsString(clientDto.getKey().getJwk()));
-                } catch (Exception e) {
-                    log.error("Error serializing JWK", e);
-                }
+    private void updateClient(Client clientToUpdate, Client clientData) {
+        clientToUpdate.setInstanceId(clientData.getInstanceId());
+        clientToUpdate.setKeyId(clientData.getKeyId());
+
+        // Store JWK as JSON string if present
+        if (clientData.getKey() != null) {
+            try {
+                clientToUpdate.setKeyJwk(objectMapper.writeValueAsString(clientData.getKey()));
+            } catch (Exception e) {
+                log.error("Error serializing JWK", e);
             }
         }
-        
-        if (clientDto.getDisplay() != null) {
-            client.setDisplayName(clientDto.getDisplay().getName());
+
+        if (clientData.getDisplay() != null) {
+            clientToUpdate.setDisplayName(clientData.getDisplay().getName());
         }
     }
 
     /**
      * Authenticate a client based on its key.
      *
-     * @param clientDto the client information
+     * @param client the client information
+     * @param signedJwt the signed JWT to verify (can be null if no signature verification is needed)
      * @return true if the client is authenticated, false otherwise
      */
     @Transactional(readOnly = true)
-    public boolean authenticateClient(GrantRequestDto.ClientDto clientDto) {
-        // In a real implementation, this would verify the client's signature
-        // using the client's key. For simplicity, we just check if the client exists.
-        if (clientDto.getKey() == null || clientDto.getKey().getKeyId() == null) {
+    public boolean authenticateClient(Client client, String signedJwt) {
+        // Check if client has a key ID
+        if (client.getKeyId() == null) {
+            log.warn("Client authentication failed: No key ID provided");
             return false;
         }
-        
-        return findByKeyId(clientDto.getKey().getKeyId()).isPresent();
+
+        // Find the client in the database
+        Optional<Client> storedClient = findByKeyId(client.getKeyId());
+        if (storedClient.isEmpty()) {
+            log.warn("Client authentication failed: No client found with key ID {}", client.getKeyId());
+            return false;
+        }
+
+        // If no signed JWT is provided, just check if the client exists
+        if (signedJwt == null || signedJwt.isEmpty()) {
+            log.info("Client authenticated by existence check only (no signature verification)");
+            return true;
+        }
+
+        // Verify the signature using the client's JWK
+        try {
+            // Parse the stored JWK
+            String keyJwk = storedClient.get().getKeyJwk();
+            if (keyJwk == null || keyJwk.isEmpty()) {
+                log.warn("Client authentication failed: No JWK found for client with key ID {}", client.getKeyId());
+                return false;
+            }
+
+            JWK jwk = JWK.parse(keyJwk);
+
+            // Parse the signed JWT
+            SignedJWT jwt = SignedJWT.parse(signedJwt);
+
+            // Verify that the JWT was signed with the key identified by the key ID
+            JWSHeader header = jwt.getHeader();
+            if (!client.getKeyId().equals(header.getKeyID())) {
+                log.warn("Client authentication failed: JWT key ID {} does not match client key ID {}", 
+                         header.getKeyID(), client.getKeyId());
+                return false;
+            }
+
+            // Create a verifier for the JWK based on its type
+            JWSVerifier verifier;
+            try {
+                // Get the key type
+                String keyType = jwk.getKeyType().getValue();
+
+                // Create the appropriate verifier based on key type
+                if ("RSA".equals(keyType)) {
+                    verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
+                        header, 
+                        jwk.toRSAKey().toRSAPublicKey());
+                } else if ("EC".equals(keyType)) {
+                    verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
+                        header, 
+                        jwk.toECKey().toECPublicKey());
+                } else if ("OKP".equals(keyType)) {
+                    verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
+                        header, 
+                        jwk.toOctetKeyPair().toPublicKey());
+                } else {
+                    log.warn("Client authentication failed: Unsupported key type: {}", keyType);
+                    return false;
+                }
+            } catch (JOSEException e) {
+                log.error("Client authentication failed: Error creating verifier for key type", e);
+                return false;
+            }
+
+            // Verify the signature
+            boolean verified = jwt.verify(verifier);
+            if (verified) {
+                log.info("Client authenticated successfully with signature verification");
+            } else {
+                log.warn("Client authentication failed: Invalid signature");
+            }
+            return verified;
+
+        } catch (ParseException e) {
+            log.error("Client authentication failed: Error parsing JWK or JWT", e);
+            return false;
+        } catch (JOSEException e) {
+            log.error("Client authentication failed: Error verifying signature", e);
+            return false;
+        }
+    }
+
+    /**
+     * Authenticate a client based on its key (simplified version that only checks existence).
+     *
+     * @param client the client information
+     * @return true if the client is authenticated, false otherwise
+     */
+    @Transactional(readOnly = true)
+    public boolean authenticateClient(Client client) {
+        return authenticateClient(client, null);
     }
 }
