@@ -98,7 +98,7 @@ public class GrantService {
      */
     private GrantRequest createGrantRequest(GrantRequest request, Client client) {
         GrantRequest grant = new GrantRequest();
-        grant.setId(UUID.randomUUID().toString());
+        grant.setId(UUID.randomUUID());
         grant.setClient(client);
         grant.setStatus(GrantRequest.GrantStatus.PENDING);
 
@@ -128,7 +128,7 @@ public class GrantService {
      */
     private Resource createResource(Resource resource, GrantRequest grant) {
         Resource newResource = new Resource();
-        newResource.setId(UUID.randomUUID().toString());
+        newResource.setId(UUID.randomUUID());
         newResource.setGrant(grant);
         newResource.setType(resource.getType());
         newResource.setResourceServer(resource.getResourceServer());
@@ -181,7 +181,7 @@ public class GrantService {
      */
     @Transactional(readOnly = true)
     public Optional<GrantRequest> findById(String grantId) {
-        return grantRequestRepository.findById(grantId);
+        return grantRequestRepository.findById(UUID.fromString(grantId));
     }
 
     /**

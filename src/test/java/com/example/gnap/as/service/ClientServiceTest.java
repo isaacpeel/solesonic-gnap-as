@@ -47,7 +47,7 @@ class ClientServiceTest {
 
         // Create test client
         testClient = new Client();
-        testClient.setId(UUID.randomUUID().toString());
+        testClient.setId(UUID.randomUUID());
         testClient.setKeyId(rsaJWK.getKeyID());
         testClient.setKeyJwk(rsaJWK.toString());
     }

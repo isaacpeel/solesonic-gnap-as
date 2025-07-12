@@ -20,8 +20,9 @@ import java.util.*;
 public class GrantRequest {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @JsonProperty("instance_id")
-    private String id;
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id")
@@ -90,7 +91,7 @@ public class GrantRequest {
     public GrantRequest() {
     }
 
-    public GrantRequest(String id, Client client, GrantStatus status, String redirectUri, 
+    public GrantRequest(UUID id, Client client, GrantStatus status, String redirectUri, 
                        String state, String userId, LocalDateTime expiresAt, 
                        Set<AccessToken> accessTokens, Set<Interaction> interactions, 
                        Set<Resource> resources, LocalDateTime createdAt, LocalDateTime updatedAt) {
@@ -108,11 +109,11 @@ public class GrantRequest {
         this.updatedAt = updatedAt;
     }
 
-    public String getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -284,7 +285,7 @@ public class GrantRequest {
     @Override
     public String toString() {
         return "GrantRequest{" +
-                "id='" + id + '\'' +
+                "id=" + id +
                 ", status=" + status +
                 ", redirectUri='" + redirectUri + '\'' +
                 ", expiresAt=" + expiresAt +

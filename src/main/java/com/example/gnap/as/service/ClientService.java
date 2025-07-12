@@ -95,7 +95,7 @@ public class ClientService {
      */
     private Client createClient(Client client) {
         Client newClient = new Client();
-        newClient.setId(UUID.randomUUID().toString());
+        newClient.setId(UUID.randomUUID());
         updateClient(newClient, client);
         return newClient;
     }

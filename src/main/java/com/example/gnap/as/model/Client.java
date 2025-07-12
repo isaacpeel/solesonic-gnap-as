@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
@@ -13,6 +15,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Entity representing a client in the GNAP protocol.
@@ -24,7 +27,8 @@ import java.util.Objects;
 public class Client {
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private UUID id;
 
     @Column(name = "instance_id")
     @JsonProperty("instance_id")
@@ -61,7 +65,7 @@ public class Client {
     public Client() {
     }
 
-    public Client(String id, String instanceId, String displayName, String keyId, String keyJwk, 
+    public Client(UUID id, String instanceId, String displayName, String keyId, String keyJwk, 
                  LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.instanceId = instanceId;
@@ -72,11 +76,11 @@ public class Client {
         this.updatedAt = updatedAt;
     }
 
-    public String getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -166,7 +170,7 @@ public class Client {
     @Override
     public String toString() {
         return "Client{" +
-                "id='" + id + '\'' +
+                "id=" + id +
                 ", instanceId='" + instanceId + '\'' +
                 ", displayName='" + displayName + '\'' +
                 ", keyId='" + keyId + '\'' +

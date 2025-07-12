@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -23,8 +24,9 @@ import java.util.stream.Collectors;
 public class Resource {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @JsonIgnore
-    private String id;
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "grant_id", nullable = false)
@@ -63,7 +65,7 @@ public class Resource {
     public Resource() {
     }
 
-    public Resource(String id, GrantRequest grant, String type, String resourceServer, 
+    public Resource(UUID id, GrantRequest grant, String type, String resourceServer, 
                    String actions, String locations, String dataTypes, 
                    LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
@@ -77,11 +79,11 @@ public class Resource {
         this.updatedAt = updatedAt;
     }
 
-    public String getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -218,7 +220,7 @@ public class Resource {
     @Override
     public String toString() {
         return "Resource{" +
-                "id='" + id + '\'' +
+                "id=" + id +
                 ", type='" + type + '\'' +
                 ", resourceServer='" + resourceServer + '\'' +
                 '}';

@@ -9,6 +9,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Entity representing an interaction in the GNAP protocol.
@@ -20,8 +21,9 @@ import java.util.Objects;
 public class Interaction {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @JsonIgnore
-    private String id;
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "grant_id", nullable = false)
@@ -62,7 +64,7 @@ public class Interaction {
     public Interaction() {
     }
 
-    public Interaction(String id, GrantRequest grant, InteractionType interactionType, 
+    public Interaction(UUID id, GrantRequest grant, InteractionType interactionType, 
                       String interactionUrl, String nonce, String hashMethod, 
                       LocalDateTime expiresAt, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
@@ -76,11 +78,11 @@ public class Interaction {
         this.updatedAt = updatedAt;
     }
 
-    public String getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -212,7 +214,7 @@ public class Interaction {
     @Override
     public String toString() {
         return "Interaction{" +
-                "id='" + id + '\'' +
+                "id=" + id +
                 ", interactionType=" + interactionType +
                 ", interactionUrl='" + interactionUrl + '\'' +
                 '}';

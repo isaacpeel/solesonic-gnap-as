@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Entity representing an access token in the GNAP protocol.
@@ -24,8 +25,9 @@ import java.util.Objects;
 public class AccessToken {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @JsonIgnore
-    private String id;
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "grant_id", nullable = false)
@@ -72,7 +74,7 @@ public class AccessToken {
     }
 
     @SuppressWarnings("unused")
-    public AccessToken(String id,
+    public AccessToken(UUID id,
                        GrantRequest grant,
                        String tokenValue,
                        String accessType,
@@ -90,11 +92,11 @@ public class AccessToken {
         this.updatedAt = updatedAt;
     }
 
-    public String getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -219,7 +221,7 @@ public class AccessToken {
     @Override
     public String toString() {
         return "AccessToken{" +
-                "id='" + id + '\'' +
+                "id=" + id +
                 ", tokenValue='" + tokenValue + '\'' +
                 ", accessType='" + accessType + '\'' +
                 ", resourceServer='" + resourceServer + '\'' +
