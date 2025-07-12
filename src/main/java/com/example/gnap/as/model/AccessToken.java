@@ -71,9 +71,15 @@ public class AccessToken {
     public AccessToken() {
     }
 
-    public AccessToken(String id, GrantRequest grant, String tokenValue, String accessType, 
-                      String resourceServer, LocalDateTime expiresAt, 
-                      LocalDateTime createdAt, LocalDateTime updatedAt) {
+    @SuppressWarnings("unused")
+    public AccessToken(String id,
+                       GrantRequest grant,
+                       String tokenValue,
+                       String accessType,
+                       String resourceServer,
+                       LocalDateTime expiresAt,
+                       LocalDateTime createdAt,
+                       LocalDateTime updatedAt) {
         this.id = id;
         this.grant = grant;
         this.tokenValue = tokenValue;
@@ -100,6 +106,7 @@ public class AccessToken {
         this.grant = grant;
     }
 
+    @SuppressWarnings("unused")
     public String getTokenValue() {
         return tokenValue;
     }
@@ -108,6 +115,7 @@ public class AccessToken {
         this.tokenValue = tokenValue;
     }
 
+    @SuppressWarnings("unused")
     public String getAccessType() {
         return accessType;
     }
@@ -145,18 +153,22 @@ public class AccessToken {
         return createdAt;
     }
 
+    @SuppressWarnings("unused")
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 
+    @SuppressWarnings("unused")
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
 
+    @SuppressWarnings("unused")
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
 
+    @SuppressWarnings("unused")
     public List<Resource> getAccess() {
         return access;
     }
@@ -165,6 +177,7 @@ public class AccessToken {
         this.access = access;
     }
 
+    @SuppressWarnings("unused")
     public void addAccess(Resource resource) {
         if (this.access == null) {
             this.access = new ArrayList<>();
@@ -172,6 +185,7 @@ public class AccessToken {
         this.access.add(resource);
     }
 
+    @SuppressWarnings("unused")
     public String getLabel() {
         return label;
     }
@@ -180,6 +194,7 @@ public class AccessToken {
         this.label = label;
     }
 
+    @SuppressWarnings("unused")
     public Map<String, Object> getParameters() {
         return parameters;
     }

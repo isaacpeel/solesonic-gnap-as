@@ -181,21 +181,20 @@ public class ClientService {
                 String keyType = jwk.getKeyType().getValue();
 
                 // Create the appropriate verifier based on key type
-                if ("RSA".equals(keyType)) {
-                    verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
-                        header, 
-                        jwk.toRSAKey().toRSAPublicKey());
-                } else if ("EC".equals(keyType)) {
-                    verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
-                        header, 
-                        jwk.toECKey().toECPublicKey());
-                } else if ("OKP".equals(keyType)) {
-                    verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
-                        header, 
-                        jwk.toOctetKeyPair().toPublicKey());
-                } else {
-                    log.warn("Client authentication failed: Unsupported key type: {}", keyType);
-                    return false;
+                switch (keyType) {
+                    case "RSA" -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
+                            header,
+                            jwk.toRSAKey().toRSAPublicKey());
+                    case "EC" -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
+                            header,
+                            jwk.toECKey().toECPublicKey());
+                    case "OKP" -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
+                            header,
+                            jwk.toOctetKeyPair().toPublicKey());
+                    case null, default -> {
+                        log.warn("Client authentication failed: Unsupported key type: {}", keyType);
+                        return false;
+                    }
                 }
             } catch (JOSEException e) {
                 log.error("Client authentication failed: Error creating verifier for key type", e);

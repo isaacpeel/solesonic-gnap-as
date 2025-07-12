@@ -5,8 +5,6 @@ import com.example.gnap.as.model.GrantRequest;
 import com.example.gnap.as.model.Interaction;
 import com.example.gnap.as.model.Resource;
 import com.example.gnap.as.repository.GrantRequestRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -23,8 +21,6 @@ import java.util.UUID;
  */
 @Service
 public class GrantService {
-
-    private static final Logger log = LoggerFactory.getLogger(GrantService.class);
 
     private final GrantRequestRepository grantRequestRepository;
     private final ClientService clientService;
@@ -45,6 +41,7 @@ public class GrantService {
     @Value("${gnap.as.token.lifetime:3600}")
     private int tokenLifetime;
 
+    @SuppressWarnings("unused")
     @Value("${gnap.as.interaction.timeout:300}")
     private int interactionTimeout;
 

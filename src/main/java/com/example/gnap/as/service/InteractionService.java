@@ -44,6 +44,11 @@ public class InteractionService {
      */
     @Transactional
     public List<Interaction> createInteractions(GrantRequest.InteractInfo interactInfo, GrantRequest grant) {
+        log.info("Creating interactions for grant request - interaction types requested: redirect={}, app={}, userCode={}",
+                interactInfo.getRedirect() != null, 
+                interactInfo.getApp() != null,
+                interactInfo.getUserCode() != null);
+
         List<Interaction> interactions = new ArrayList<>();
 
         // Create redirect interaction if requested
@@ -56,6 +61,7 @@ public class InteractionService {
             // Nonce is not directly accessible in InteractInfo, would need to be added
             interaction.setExpiresAt(LocalDateTime.now().plusSeconds(interactionTimeout));
             interactions.add(interaction);
+            log.debug("Created REDIRECT interaction");
         }
 
         // Create app interaction if requested
@@ -68,6 +74,7 @@ public class InteractionService {
             // Nonce is not directly accessible in InteractInfo, would need to be added
             interaction.setExpiresAt(LocalDateTime.now().plusSeconds(interactionTimeout));
             interactions.add(interaction);
+            log.debug("Created APP interaction");
         }
 
         // Create user code interaction if requested
@@ -79,6 +86,7 @@ public class InteractionService {
             interaction.setInteractionUrl(issuer + "/gnap/interact/user-code/" + grant.getId());
             interaction.setExpiresAt(LocalDateTime.now().plusSeconds(interactionTimeout));
             interactions.add(interaction);
+            log.debug("Created USER_CODE interaction");
         }
 
         // Set hash method for finish callback if provided
@@ -86,9 +94,12 @@ public class InteractionService {
             for (Interaction interaction : interactions) {
                 interaction.setHashMethod(interactInfo.getFinish().getMethod());
             }
+            log.debug("Set hash method for {} interactions", interactions.size());
         }
 
-        return interactionRepository.saveAll(interactions);
+        List<Interaction> savedInteractions = interactionRepository.saveAll(interactions);
+        log.info("Successfully created {} interactions", savedInteractions.size());
+        return savedInteractions;
     }
 
     /**
@@ -98,24 +109,29 @@ public class InteractionService {
      * @return the interaction response
      */
     public GrantRequest.InteractInfo buildInteractResponse(List<Interaction> interactions) {
+        log.info("Building interaction response from {} interactions", interactions.size());
         GrantRequest.InteractInfo interactInfo = new GrantRequest.InteractInfo();
 
         for (Interaction interaction : interactions) {
             switch (interaction.getInteractionType()) {
                 case REDIRECT:
                     interactInfo.setRedirect(interaction.getInteractionUrl());
+                    log.debug("Added REDIRECT interaction to response");
                     break;
                 case APP:
                     interactInfo.setApp(interaction.getInteractionUrl());
+                    log.debug("Added APP interaction to response");
                     break;
                 case USER_CODE:
                     Interaction.UserCode userCode = new Interaction.UserCode();
                     userCode.setCode(generateUserCode());
                     userCode.setUri(interaction.getInteractionUrl());
                     interactInfo.setUserCode(userCode);
+                    log.debug("Added USER_CODE interaction to response");
                     break;
                 case USER_CODE_URI:
                     // No need to set anything here, as the client already has the URI
+                    log.debug("Skipped USER_CODE_URI interaction in response");
                     break;
             }
         }
@@ -130,8 +146,16 @@ public class InteractionService {
             finish.setUri(issuer + "/gnap/interact/finish/" + interactionWithHash.get().getGrant().getId());
             finish.setMethod(interactionWithHash.get().getHashMethod());
             interactInfo.setFinish(finish);
+            log.debug("Added finish information to response with hash method");
+        } else {
+            log.debug("No finish information added to response (no hash method found)");
         }
 
+        log.info("Completed building interaction response with redirect={}, app={}, userCode={}, finish={}",
+                interactInfo.getRedirect() != null,
+                interactInfo.getApp() != null,
+                interactInfo.getUserCode() != null,
+                interactInfo.getFinish() != null);
         return interactInfo;
     }
 
@@ -141,8 +165,11 @@ public class InteractionService {
      * @return the generated user code
      */
     private String generateUserCode() {
+        log.debug("Generating new user code");
         // Generate a 6-digit code
-        return String.format("%06d", (int) (Math.random() * 1000000));
+        String code = String.format("%06d", (int) (Math.random() * 1000000));
+        log.debug("User code generated successfully");
+        return code;
     }
 
     /**
@@ -155,9 +182,12 @@ public class InteractionService {
      */
     @Transactional(readOnly = true)
     public boolean validateInteraction(String grantId, String interactionId, String nonce) {
+        log.info("Validating interaction");
+
         Optional<Interaction> interaction = interactionRepository.findById(interactionId);
 
         if (interaction.isEmpty()) {
+            log.info("Interaction validation failed: interaction not found");
             return false;
         }
 
@@ -165,16 +195,25 @@ public class InteractionService {
 
         // Check if the interaction belongs to the grant
         if (!i.getGrant().getId().equals(grantId)) {
+            log.info("Interaction validation failed: interaction does not belong to the specified grant");
             return false;
         }
 
         // Check if the interaction has expired
         if (i.getExpiresAt().isBefore(LocalDateTime.now())) {
+            log.info("Interaction validation failed: interaction has expired");
             return false;
         }
 
         // Check if the nonce matches (if provided)
-        return i.getNonce() == null || i.getNonce().equals(nonce);
+        boolean nonceValid = i.getNonce() == null || i.getNonce().equals(nonce);
+        if (!nonceValid) {
+            log.info("Interaction validation failed: nonce mismatch");
+        } else {
+            log.info("Interaction validation successful");
+        }
+
+        return nonceValid;
     }
 
     /**
@@ -185,7 +224,10 @@ public class InteractionService {
      */
     @Transactional(readOnly = true)
     public List<Interaction> findActiveInteractions(String grantId) {
-        return interactionRepository.findByGrantIdAndExpiresAtAfter(grantId, LocalDateTime.now());
+        log.info("Finding active interactions for grant");
+        List<Interaction> activeInteractions = interactionRepository.findByGrantIdAndExpiresAtAfter(grantId, LocalDateTime.now());
+        log.info("Found {} active interactions", activeInteractions.size());
+        return activeInteractions;
     }
 
     /**
@@ -193,7 +235,15 @@ public class InteractionService {
      */
     @Transactional
     public void cleanupExpiredInteractions() {
+        log.info("Starting cleanup of expired interactions");
         List<Interaction> expiredInteractions = interactionRepository.findByExpiresAtBefore(LocalDateTime.now());
-        interactionRepository.deleteAll(expiredInteractions);
+        log.info("Found {} expired interactions to clean up", expiredInteractions.size());
+
+        if (!expiredInteractions.isEmpty()) {
+            interactionRepository.deleteAll(expiredInteractions);
+            log.info("Successfully deleted {} expired interactions", expiredInteractions.size());
+        } else {
+            log.debug("No expired interactions to clean up");
+        }
     }
 }

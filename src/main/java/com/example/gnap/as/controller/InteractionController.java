@@ -193,7 +193,7 @@ public class InteractionController {
 
         if (approved) {
             // Redirect to finish endpoint
-            Interaction interaction = interactions.get(0);
+            Interaction interaction = interactions.getFirst();
             String hash = "approved"; // In a real implementation, this would be a proper hash
             return new RedirectView("/gnap/interact/finish/" + grantId + 
                     "?interactionId=" + interaction.getId() + "&hash=" + hash);

@@ -6,7 +6,6 @@ import com.example.gnap.as.model.Resource;
 import com.example.gnap.as.repository.AccessTokenRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.SecretKey;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -37,10 +37,21 @@ public class TokenService {
     private String issuer;
 
     // In a production environment, this would be stored securely and not generated on startup
-    private final SecretKey jwtKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private final SecretKey jwtKey = Keys.hmacShaKeyFor(generateSecureRandomKey());
 
     public TokenService(AccessTokenRepository accessTokenRepository) {
         this.accessTokenRepository = accessTokenRepository;
+    }
+
+    /**
+     * Generate a secure random key for HMAC-SHA256
+     * @return byte array containing the key
+     */
+    private byte[] generateSecureRandomKey() {
+        SecureRandom secureRandom = new SecureRandom();
+        byte[] key = new byte[32]; // 256 bits
+        secureRandom.nextBytes(key);
+        return key;
     }
 
     /**
@@ -51,10 +62,10 @@ public class TokenService {
      */
     public String generateContinuationToken(GrantRequest grant) {
         return Jwts.builder()
-                .setSubject(grant.getId())
-                .setIssuer(issuer)
-                .setIssuedAt(new Date())
-                .setExpiration(Date.from(LocalDateTime.now().plusSeconds(tokenLifetime)
+                .subject(grant.getId())
+                .issuer(issuer)
+                .issuedAt(new Date())
+                .expiration(Date.from(LocalDateTime.now().plusSeconds(tokenLifetime)
                         .atZone(ZoneId.systemDefault()).toInstant()))
                 .claim("token_type", "continuation")
                 .signWith(jwtKey)
@@ -70,11 +81,11 @@ public class TokenService {
      */
     public boolean validateContinuationToken(String grantId, String token) {
         try {
-            Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(jwtKey)
+            Claims claims = Jwts.parser()
+                    .verifyWith(jwtKey)
                     .build()
-                    .parseClaimsJws(token)
-                    .getBody();
+                    .parseSignedClaims(token)
+                    .getPayload();
 
             return !claims.getSubject().equals(grantId) || !"continuation".equals(claims.get("token_type"));
         } catch (Exception e) {
@@ -176,12 +187,12 @@ public class TokenService {
         claims.put("access", scopes);
 
         return Jwts.builder()
-                .setClaims(claims)
-                .setIssuer(issuer)
-                .setIssuedAt(new Date())
-                .setExpiration(Date.from(LocalDateTime.now().plusSeconds(tokenLifetime)
+                .claims(claims)
+                .issuer(issuer)
+                .issuedAt(new Date())
+                .expiration(Date.from(LocalDateTime.now().plusSeconds(tokenLifetime)
                         .atZone(ZoneId.systemDefault()).toInstant()))
-                .setAudience(resourceServer)
+                .audience().add(resourceServer).and()
                 .signWith(jwtKey)
                 .compact();
     }

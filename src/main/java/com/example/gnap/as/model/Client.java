@@ -112,18 +112,22 @@ public class Client {
         this.keyJwk = keyJwk;
     }
 
+    @SuppressWarnings("unused")
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
+    @SuppressWarnings("unused")
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 
+    @SuppressWarnings("unused")
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
 
+    @SuppressWarnings("unused")
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
@@ -132,6 +136,7 @@ public class Client {
         return key;
     }
 
+    @SuppressWarnings("unused")
     public void setKey(Map<String, Object> key) {
         this.key = key;
     }
@@ -140,6 +145,7 @@ public class Client {
         return display;
     }
 
+    @SuppressWarnings("unused")
     public void setDisplay(Display display) {
         this.display = display;
     }
@@ -178,9 +184,11 @@ public class Client {
         @JsonProperty("logo_uri")
         private String logoUri;
 
+        @SuppressWarnings("unused")
         public Display() {
         }
 
+        @SuppressWarnings("unused")
         public Display(String name, String uri, String logoUri) {
             this.name = name;
             this.uri = uri;
@@ -195,18 +203,22 @@ public class Client {
             this.name = name;
         }
 
+        @SuppressWarnings("unused")
         public String getUri() {
             return uri;
         }
 
+        @SuppressWarnings("unused")
         public void setUri(String uri) {
             this.uri = uri;
         }
 
+        @SuppressWarnings("unused")
         public String getLogoUri() {
             return logoUri;
         }
 
+        @SuppressWarnings("unused")
         public void setLogoUri(String logoUri) {
             this.logoUri = logoUri;
         }

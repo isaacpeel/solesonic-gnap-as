@@ -28,6 +28,7 @@ public interface AccessTokenRepository extends JpaRepository<AccessToken, String
      * @param grantId the grant ID
      * @return the list of access tokens
      */
+    @SuppressWarnings("unused")
     List<AccessToken> findByGrantId(String grantId);
     
     /**
@@ -36,6 +37,7 @@ public interface AccessTokenRepository extends JpaRepository<AccessToken, String
      * @param resourceServer the resource server
      * @return the list of access tokens
      */
+    @SuppressWarnings("unused")
     List<AccessToken> findByResourceServer(String resourceServer);
     
     /**
@@ -52,5 +54,6 @@ public interface AccessTokenRepository extends JpaRepository<AccessToken, String
      * @param accessType the access type
      * @return the list of access tokens
      */
+    @SuppressWarnings("unused")
     List<AccessToken> findByAccessType(String accessType);
 }

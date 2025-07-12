@@ -134,10 +134,12 @@ public class Resource {
         }
     }
 
+    @SuppressWarnings("unused")
     public String getLocations() {
         return locations;
     }
 
+    @SuppressWarnings("unused")
     public void setLocations(String locations) {
         this.locations = locations;
     }
