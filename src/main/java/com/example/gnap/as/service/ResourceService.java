@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@SuppressWarnings("unused")
 public class ResourceService {
     private final ResourceRepository resourceRepository;
 
