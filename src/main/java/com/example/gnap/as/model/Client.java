@@ -32,7 +32,7 @@ public class Client {
 
     @Column(name = "instance_id")
     @JsonProperty("instance_id")
-    private String instanceId;
+    private UUID instanceId;
 
     @Column(name = "display_name")
     private String displayName;
@@ -65,7 +65,7 @@ public class Client {
     public Client() {
     }
 
-    public Client(UUID id, String instanceId, String displayName, String keyId, String keyJwk, 
+    public Client(UUID id, UUID instanceId, String displayName, String keyId, String keyJwk, 
                  LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.instanceId = instanceId;
@@ -84,11 +84,11 @@ public class Client {
         this.id = id;
     }
 
-    public String getInstanceId() {
+    public UUID getInstanceId() {
         return instanceId;
     }
 
-    public void setInstanceId(String instanceId) {
+    public void setInstanceId(UUID instanceId) {
         this.instanceId = instanceId;
     }
 

@@ -8,21 +8,22 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Repository for GrantRequest entity.
  */
 @Repository
-public interface GrantRequestRepository extends JpaRepository<GrantRequest, String> {
-    
+public interface GrantRequestRepository extends JpaRepository<GrantRequest, UUID> {
+
     /**
      * Find grants by client ID.
      *
      * @param clientId the client ID
      * @return the list of grants
      */
-    List<GrantRequest> findByClientId(String clientId);
-    
+    List<GrantRequest> findByClientId(UUID clientId);
+
     /**
      * Find grants by status.
      *
@@ -30,15 +31,15 @@ public interface GrantRequestRepository extends JpaRepository<GrantRequest, Stri
      * @return the list of grants
      */
     List<GrantRequest> findByStatus(GrantStatus status);
-    
+
     /**
      * Find grants by user ID.
      *
      * @param userId the user ID
      * @return the list of grants
      */
-    List<GrantRequest> findByUserId(String userId);
-    
+    List<GrantRequest> findByUserId(UUID userId);
+
     /**
      * Find grants that have expired.
      *
@@ -46,7 +47,7 @@ public interface GrantRequestRepository extends JpaRepository<GrantRequest, Stri
      * @return the list of expired grants
      */
     List<GrantRequest> findByExpiresAtBefore(LocalDateTime now);
-    
+
     /**
      * Find active grants by client ID and user ID.
      *
@@ -56,5 +57,5 @@ public interface GrantRequestRepository extends JpaRepository<GrantRequest, Stri
      * @return the list of active grants
      */
     @Query("SELECT g FROM GrantRequest g WHERE g.client.id = ?1 AND g.userId = ?2 AND g.status IN ?3")
-    List<GrantRequest> findActiveGrantsByClientIdAndUserId(String clientId, String userId, List<GrantStatus> statuses);
+    List<GrantRequest> findActiveGrantsByClientIdAndUserId(UUID clientId, UUID userId, List<GrantStatus> statuses);
 }

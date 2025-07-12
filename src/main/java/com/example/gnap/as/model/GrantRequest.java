@@ -44,7 +44,7 @@ public class GrantRequest {
 
     @Column(name = "user_id")
     @JsonIgnore
-    private String userId;
+    private UUID userId;
 
     @Column(name = "expires_at", nullable = false)
     @JsonIgnore
@@ -92,7 +92,7 @@ public class GrantRequest {
     }
 
     public GrantRequest(UUID id, Client client, GrantStatus status, String redirectUri, 
-                       String state, String userId, LocalDateTime expiresAt, 
+                       String state, UUID userId, LocalDateTime expiresAt, 
                        Set<AccessToken> accessTokens, Set<Interaction> interactions, 
                        Set<Resource> resources, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
@@ -149,11 +149,11 @@ public class GrantRequest {
         this.state = state;
     }
 
-    public String getUserId() {
+    public UUID getUserId() {
         return userId;
     }
 
-    public void setUserId(String userId) {
+    public void setUserId(UUID userId) {
         this.userId = userId;
     }
 

@@ -41,7 +41,7 @@ public class ClientService {
      * @return the client if found
      */
     @Transactional(readOnly = true)
-    public Optional<Client> findByInstanceId(String instanceId) {
+    public Optional<Client> findByInstanceId(UUID instanceId) {
         return clientRepository.findByInstanceId(instanceId);
     }
 
