@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 /**
  * Controller for grant management in the GNAP protocol.
  */
@@ -56,7 +58,7 @@ public class GrantController {
      */
     @GetMapping("/grant/{grantId}")
     public ResponseEntity<GrantRequest> processContinuation(
-            @PathVariable String grantId,
+            @PathVariable UUID grantId,
             @RequestHeader("Authorization") String authorization) {
         log.info("Received continuation request for grant: {}", grantId);
         try {
@@ -83,7 +85,7 @@ public class GrantController {
      */
     @PutMapping("/grant/{grantId}/status")
     public ResponseEntity<Void> updateGrantStatus(
-            @PathVariable String grantId,
+            @PathVariable UUID grantId,
             @RequestParam String status,
             @RequestHeader("Authorization") String authorization) {
         log.info("Received status update request for grant: {}, status: {}", grantId, status);

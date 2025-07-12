@@ -15,6 +15,7 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Controller for interaction management in the GNAP protocol.
@@ -41,10 +42,11 @@ public class InteractionController {
      * @return the consent page
      */
     @GetMapping("/redirect/{grantId}")
-    public String handleRedirect(@PathVariable String grantId, Model model) {
+    public String handleRedirect(@PathVariable UUID grantId, Model model) {
         log.info("Received redirect interaction for grant: {}", grantId);
 
         Optional<GrantRequest> grant = grantService.findById(grantId);
+
         if (grant.isEmpty()) {
             model.addAttribute("error", "Grant not found");
             return "error";
@@ -71,7 +73,7 @@ public class InteractionController {
      */
     @GetMapping("/app/{grantId}")
     @ResponseBody
-    public ResponseEntity<AppLaunchInfo> handleApp(@PathVariable String grantId) {
+    public ResponseEntity<AppLaunchInfo> handleApp(@PathVariable UUID grantId) {
         log.info("Received app interaction for grant: {}", grantId);
 
         Optional<GrantRequest> grant = grantService.findById(grantId);
@@ -101,7 +103,7 @@ public class InteractionController {
      * @return the user code page
      */
     @GetMapping("/user-code/{grantId}")
-    public String handleUserCode(@PathVariable String grantId, Model model) {
+    public String handleUserCode(@PathVariable UUID grantId, Model model) {
         log.info("Received user code interaction for grant: {}", grantId);
 
         Optional<GrantRequest> grant = grantService.findById(grantId);
@@ -134,7 +136,7 @@ public class InteractionController {
      */
     @GetMapping("/finish/{grantId}")
     public RedirectView handleFinish(
-            @PathVariable String grantId,
+            @PathVariable UUID grantId,
             @RequestParam String interactionId,
             @RequestParam String hash) {
         log.info("Received finish interaction for grant: {}, interaction: {}", grantId, interactionId);
@@ -172,7 +174,7 @@ public class InteractionController {
      */
     @PostMapping("/consent/{grantId}")
     public RedirectView submitConsent(
-            @PathVariable String grantId,
+            @PathVariable UUID grantId,
             @RequestParam boolean approved) {
         log.info("Received consent submission for grant: {}, approved: {}", grantId, approved);
 
@@ -217,14 +219,14 @@ public class InteractionController {
      * App launch information.
      */
     public static class AppLaunchInfo {
-        private String grantId;
+        private UUID grantId;
         private String clientName;
 
-        public String getGrantId() {
+        public UUID getGrantId() {
             return grantId;
         }
 
-        public void setGrantId(String grantId) {
+        public void setGrantId(UUID grantId) {
             this.grantId = grantId;
         }
 

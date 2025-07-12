@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Repository for Interaction entity.
@@ -54,5 +55,5 @@ public interface InteractionRepository extends JpaRepository<Interaction, String
      * @param now the current time
      * @return the list of active interactions
      */
-    List<Interaction> findByGrantIdAndExpiresAtAfter(String grantId, LocalDateTime now);
+    List<Interaction> findByGrantIdAndExpiresAtAfter(UUID grantId, LocalDateTime now);
 }

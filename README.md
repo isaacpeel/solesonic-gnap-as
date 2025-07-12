@@ -15,6 +15,7 @@ GNAP provides a flexible framework for delegated authorization, allowing clients
 - Token management (issuance, introspection, revocation)
 - Grant request processing and continuation
 - User consent flows
+- PostgreSQL database (with Docker Compose setup)
 - H2 in-memory database for development
 - Liquibase for database migrations
 
@@ -24,6 +25,7 @@ GNAP provides a flexible framework for delegated authorization, allowing clients
 - Spring Boot 3.5.3
 - Spring Data JPA
 - Spring Security
+- PostgreSQL Database
 - H2 Database (for development)
 - Liquibase
 - JSON Web Tokens (JWT)
@@ -34,6 +36,7 @@ GNAP provides a flexible framework for delegated authorization, allowing clients
 
 - Java 17 or higher
 - Maven 3.6 or higher
+- Docker and Docker Compose (for PostgreSQL database)
 
 ### Installation
 
@@ -48,12 +51,79 @@ GNAP provides a flexible framework for delegated authorization, allowing clients
    ./mvnw clean install
    ```
 
-3. Run the application:
+3. Start the PostgreSQL database using Docker Compose:
+   ```bash
+   docker-compose up -d
+   ```
+
+4. Run the application:
    ```bash
    ./mvnw spring-boot:run
    ```
 
 The server will start on port 8080 by default.
+
+### Database Setup with Docker Compose
+
+The project includes a `docker-compose.yml` file that sets up a PostgreSQL database for the application:
+
+```yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: gnap-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: gnapdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+```
+
+To start the database:
+```bash
+docker-compose up -d
+```
+
+To stop the database:
+```bash
+docker-compose down
+```
+
+To stop the database and remove all data:
+```bash
+docker-compose down -v
+```
+
+### Environment Variables
+
+The project uses environment variables for configuration. Create a `.env` file in the project root with the following variables:
+
+```
+POSTGRES_USER=gnap
+POSTGRES_PASSWORD=gnap
+GNAP_DB_USERNAME=gnap
+GNAP_DB_PASSWORD=gnap
+```
+
+These variables are used by:
+- Docker Compose to configure the PostgreSQL container
+- Spring Boot application to connect to the database
+
+You can customize these values as needed for your environment.
 
 ## Configuration
 
@@ -64,10 +134,19 @@ The application can be configured through the `application.properties` file:
 server.port=8080
 
 # Database configuration
-spring.datasource.url=jdbc:h2:mem:gnapdb
-spring.datasource.driverClassName=org.h2.Driver
-spring.datasource.username=sa
-spring.datasource.password=password
+spring.datasource.url=jdbc:postgresql://localhost:5432/gnapdb
+spring.datasource.driverClassName=org.postgresql.Driver
+spring.datasource.username=${GNAP_DB_USERNAME}
+spring.datasource.password=${GNAP_DB_PASSWORD}
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+
+# JPA/Hibernate configuration
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+# Liquibase configuration
+spring.liquibase.change-log=classpath:db/changelog/db.changelog-main.xml
+spring.liquibase.enabled=true
 
 # GNAP AS configuration
 gnap.as.issuer=https://auth.example.com

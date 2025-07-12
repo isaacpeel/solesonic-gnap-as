@@ -180,8 +180,8 @@ public class GrantService {
      * @return the grant if found
      */
     @Transactional(readOnly = true)
-    public Optional<GrantRequest> findById(String grantId) {
-        return grantRequestRepository.findById(UUID.fromString(grantId));
+    public Optional<GrantRequest> findById(UUID grantId) {
+        return grantRequestRepository.findById(grantId);
     }
 
     /**
@@ -191,7 +191,7 @@ public class GrantService {
      * @param status the new status
      */
     @Transactional
-    public void updateGrantStatus(String grantId, GrantRequest.GrantStatus status) {
+    public void updateGrantStatus(UUID grantId, GrantRequest.GrantStatus status) {
         GrantRequest grant = grantRequestRepository.findById(grantId)
                 .orElseThrow(() -> new IllegalArgumentException("Grant not found: " + grantId));
 
@@ -207,7 +207,7 @@ public class GrantService {
      * @return the grant response
      */
     @Transactional
-    public GrantRequest processContinuation(String grantId, String continuationToken) {
+    public GrantRequest processContinuation(UUID grantId, String continuationToken) {
         // Validate continuation token
         if (tokenService.validateContinuationToken(grantId, continuationToken)) {
             throw new IllegalArgumentException("Invalid continuation token");

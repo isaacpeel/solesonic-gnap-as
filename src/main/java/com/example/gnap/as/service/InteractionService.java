@@ -54,7 +54,6 @@ public class InteractionService {
         // Create redirect interaction if requested
         if (interactInfo.getRedirect() != null) {
             Interaction interaction = new Interaction();
-            interaction.setId(UUID.randomUUID().toString());
             interaction.setGrant(grant);
             interaction.setInteractionType(Interaction.InteractionType.REDIRECT);
             interaction.setInteractionUrl(issuer + "/gnap/interact/redirect/" + grant.getId());
@@ -67,7 +66,6 @@ public class InteractionService {
         // Create app interaction if requested
         if (interactInfo.getApp() != null) {
             Interaction interaction = new Interaction();
-            interaction.setId(UUID.randomUUID().toString());
             interaction.setGrant(grant);
             interaction.setInteractionType(Interaction.InteractionType.APP);
             interaction.setInteractionUrl(issuer + "/gnap/interact/app/" + grant.getId());
@@ -80,7 +78,6 @@ public class InteractionService {
         // Create user code interaction if requested
         if (interactInfo.getUserCode() != null) {
             Interaction interaction = new Interaction();
-            interaction.setId(UUID.randomUUID().toString());
             interaction.setGrant(grant);
             interaction.setInteractionType(Interaction.InteractionType.USER_CODE);
             interaction.setInteractionUrl(issuer + "/gnap/interact/user-code/" + grant.getId());
@@ -181,32 +178,32 @@ public class InteractionService {
      * @return true if the interaction is valid, false otherwise
      */
     @Transactional(readOnly = true)
-    public boolean validateInteraction(String grantId, String interactionId, String nonce) {
+    public boolean validateInteraction(UUID grantId, String interactionId, String nonce) {
         log.info("Validating interaction");
 
-        Optional<Interaction> interaction = interactionRepository.findById(interactionId);
+        Optional<Interaction> interactionOptional = interactionRepository.findById(interactionId);
 
-        if (interaction.isEmpty()) {
+        if (interactionOptional.isEmpty()) {
             log.info("Interaction validation failed: interaction not found");
             return false;
         }
 
-        Interaction i = interaction.get();
+        Interaction interaction = interactionOptional.get();
 
         // Check if the interaction belongs to the grant
-        if (!i.getGrant().getId().equals(grantId)) {
+        if (!interaction.getGrant().getId().equals(grantId)) {
             log.info("Interaction validation failed: interaction does not belong to the specified grant");
             return false;
         }
 
         // Check if the interaction has expired
-        if (i.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (interaction.getExpiresAt().isBefore(LocalDateTime.now())) {
             log.info("Interaction validation failed: interaction has expired");
             return false;
         }
 
         // Check if the nonce matches (if provided)
-        boolean nonceValid = i.getNonce() == null || i.getNonce().equals(nonce);
+        boolean nonceValid = interaction.getNonce() == null || interaction.getNonce().equals(nonce);
         if (!nonceValid) {
             log.info("Interaction validation failed: nonce mismatch");
         } else {
@@ -223,7 +220,7 @@ public class InteractionService {
      * @return the list of active interactions
      */
     @Transactional(readOnly = true)
-    public List<Interaction> findActiveInteractions(String grantId) {
+    public List<Interaction> findActiveInteractions(UUID grantId) {
         log.info("Finding active interactions for grant");
         List<Interaction> activeInteractions = interactionRepository.findByGrantIdAndExpiresAtAfter(grantId, LocalDateTime.now());
         log.info("Found {} active interactions", activeInteractions.size());
