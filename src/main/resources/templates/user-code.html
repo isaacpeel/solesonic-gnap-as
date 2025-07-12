@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Code</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .client-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            text-align: left;
+        }
+        .code-display {
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 5px;
+        }
+        .instructions {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .timer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Authorization Code</h1>
+        
+        <div class="client-info">
+            <h2>Client Information</h2>
+            <p><strong>Client:</strong> <span th:text="${grant.client != null ? grant.client.displayName : 'Unknown Client'}">Client Name</span></p>
+            <p><strong>Request ID:</strong> <span th:text="${grant.id}">Grant ID</span></p>
+        </div>
+        
+        <div class="instructions">
+            <p>Please enter the following code on your device to continue the authorization process:</p>
+        </div>
+        
+        <div class="code-display" th:text="${userCode}">123456</div>
+        
+        <div class="instructions">
+            <p>This code will expire in 5 minutes. Once you've entered the code on your device, you can close this window.</p>
+        </div>
+        
+        <div class="timer">
+            <p>Time remaining: <span id="timer">5:00</span></p>
+        </div>
+    </div>
+    
+    <script>
+        // Timer functionality
+        function startTimer(duration, display) {
+            var timer = duration, minutes, seconds;
+            var interval = setInterval(function () {
+                minutes = parseInt(timer / 60, 10);
+                seconds = parseInt(timer % 60, 10);
+
+                minutes = minutes < 10 ? "0" + minutes : minutes;
+                seconds = seconds < 10 ? "0" + seconds : seconds;
+
+                display.textContent = minutes + ":" + seconds;
+
+                if (--timer < 0) {
+                    clearInterval(interval);
+                    display.textContent = "Expired";
+                }
+            }, 1000);
+        }
+
+        window.onload = function () {
+            var fiveMinutes = 60 * 5,
+                display = document.querySelector('#timer');
+            startTimer(fiveMinutes, display);
+        };
+    </script>
+</body>
+</html>
