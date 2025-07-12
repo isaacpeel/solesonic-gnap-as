@@ -3,6 +3,7 @@ package com.example.gnap.as.service;
 import com.example.gnap.as.model.Client;
 import com.example.gnap.as.repository.ClientRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.annotation.Lazy;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
@@ -29,7 +30,7 @@ public class ClientService {
     private final ClientRepository clientRepository;
     private final ObjectMapper objectMapper;
 
-    public ClientService(ClientRepository clientRepository, ObjectMapper objectMapper) {
+    public ClientService(ClientRepository clientRepository, @Lazy ObjectMapper objectMapper) {
         this.clientRepository = clientRepository;
         this.objectMapper = objectMapper;
     }

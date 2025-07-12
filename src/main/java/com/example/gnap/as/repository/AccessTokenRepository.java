@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Repository for AccessToken entity.
@@ -29,7 +30,7 @@ public interface AccessTokenRepository extends JpaRepository<AccessToken, String
      * @return the list of access tokens
      */
     @SuppressWarnings("unused")
-    List<AccessToken> findByGrantId(String grantId);
+    List<AccessToken> findByGrantId(UUID grantId);
     
     /**
      * Find access tokens by resource server.

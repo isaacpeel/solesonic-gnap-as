@@ -29,7 +29,7 @@ public class GrantService {
 
     public GrantService(
             GrantRequestRepository grantRequestRepository,
-            ClientService clientService,
+            @Lazy ClientService clientService,
             @Lazy InteractionService interactionService,
             @Lazy TokenService tokenService) {
         this.grantRequestRepository = grantRequestRepository;

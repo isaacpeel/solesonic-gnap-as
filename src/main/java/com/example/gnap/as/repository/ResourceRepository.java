@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Repository for Resource entity.
@@ -18,7 +19,7 @@ public interface ResourceRepository extends JpaRepository<Resource, String> {
      * @param grantId the grant ID
      * @return the list of resources
      */
-    List<Resource> findByGrantId(String grantId);
+    List<Resource> findByGrantId(UUID grantId);
     
     /**
      * Find resources by type.
@@ -43,7 +44,7 @@ public interface ResourceRepository extends JpaRepository<Resource, String> {
      * @param type the resource type
      * @return the list of resources
      */
-    List<Resource> findByGrantIdAndType(String grantId, String type);
+    List<Resource> findByGrantIdAndType(UUID grantId, String type);
     
     /**
      * Find resources by grant ID and resource server.
@@ -52,5 +53,5 @@ public interface ResourceRepository extends JpaRepository<Resource, String> {
      * @param resourceServer the resource server
      * @return the list of resources
      */
-    List<Resource> findByGrantIdAndResourceServer(String grantId, String resourceServer);
+    List<Resource> findByGrantIdAndResourceServer(UUID grantId, String resourceServer);
 }

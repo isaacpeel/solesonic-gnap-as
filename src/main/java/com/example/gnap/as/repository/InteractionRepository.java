@@ -22,7 +22,7 @@ public interface InteractionRepository extends JpaRepository<Interaction, String
      * @param grantId the grant ID
      * @return the list of interactions
      */
-    List<Interaction> findByGrantId(String grantId);
+    List<Interaction> findByGrantId(UUID grantId);
     
     /**
      * Find interactions by interaction type.
