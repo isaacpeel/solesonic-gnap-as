@@ -3,18 +3,12 @@ package com.example.gnap.as.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -65,8 +59,13 @@ public class Client {
     public Client() {
     }
 
-    public Client(UUID id, UUID instanceId, String displayName, String keyId, String keyJwk, 
-                 LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public Client(UUID id,
+                  UUID instanceId,
+                  String displayName,
+                  String keyId,
+                  String keyJwk,
+                  LocalDateTime createdAt,
+                  LocalDateTime updatedAt) {
         this.id = id;
         this.instanceId = instanceId;
         this.displayName = displayName;
@@ -152,29 +151,6 @@ public class Client {
     @SuppressWarnings("unused")
     public void setDisplay(Display display) {
         this.display = display;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Client client = (Client) o;
-        return Objects.equals(id, client.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
-
-    @Override
-    public String toString() {
-        return "Client{" +
-                "id=" + id +
-                ", instanceId='" + instanceId + '\'' +
-                ", displayName='" + displayName + '\'' +
-                ", keyId='" + keyId + '\'' +
-                '}';
     }
 
     /**

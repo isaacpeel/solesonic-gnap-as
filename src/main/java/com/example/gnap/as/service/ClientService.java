@@ -3,7 +3,6 @@ package com.example.gnap.as.service;
 import com.example.gnap.as.model.Client;
 import com.example.gnap.as.repository.ClientRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.context.annotation.Lazy;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
@@ -19,6 +18,8 @@ import java.text.ParseException;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+
 /**
  * Service for client management in the GNAP protocol.
  */
@@ -27,10 +28,20 @@ public class ClientService {
 
     private static final Logger log = LoggerFactory.getLogger(ClientService.class);
 
+    /** RSA key type for RSA-based cryptographic operations */
+    public static final String RSA = "RSA";
+
+    /** EC key type for Elliptic Curve-based cryptographic operations */
+    public static final String EC = "EC";
+
+    /** OKP key type for Octet Key Pair (Ed25519, Ed448, X25519, X448) cryptographic operations */
+    public static final String OKP = "OKP";
+
     private final ClientRepository clientRepository;
     private final ObjectMapper objectMapper;
 
-    public ClientService(ClientRepository clientRepository, @Lazy ObjectMapper objectMapper) {
+    public ClientService(ClientRepository clientRepository,
+                         ObjectMapper objectMapper) {
         this.clientRepository = clientRepository;
         this.objectMapper = objectMapper;
     }
@@ -67,17 +78,19 @@ public class ClientService {
     public Client registerClient(Client client) {
         // Check if client already exists by instance ID
         Optional<Client> existingClient = Optional.empty();
+
         if (client.getInstanceId() != null) {
             existingClient = findByInstanceId(client.getInstanceId());
         }
 
         // Check if client exists by key ID
-        if (existingClient.isEmpty() && client.getKeyId() != null) {
+        if (existingClient.isEmpty() && isNotEmpty(client.getKeyId())) {
             existingClient = findByKeyId(client.getKeyId());
         }
 
         // Update existing client or create new one
         Client clientToSave;
+
         if (existingClient.isPresent()) {
             clientToSave = existingClient.get();
             updateClient(clientToSave, client);
@@ -169,27 +182,28 @@ public class ClientService {
 
             // Verify that the JWT was signed with the key identified by the key ID
             JWSHeader header = jwt.getHeader();
+
             if (!client.getKeyId().equals(header.getKeyID())) {
-                log.warn("Client authentication failed: JWT key ID {} does not match client key ID {}", 
-                         header.getKeyID(), client.getKeyId());
+                log.warn("Client authentication failed: JWT key ID {} does not match client key ID {}", header.getKeyID(), client.getKeyId());
                 return false;
             }
 
             // Create a verifier for the JWK based on its type
             JWSVerifier verifier;
+
             try {
                 // Get the key type
                 String keyType = jwk.getKeyType().getValue();
 
                 // Create the appropriate verifier based on key type
                 switch (keyType) {
-                    case "RSA" -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
+                    case RSA -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
                             header,
                             jwk.toRSAKey().toRSAPublicKey());
-                    case "EC" -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
+                    case EC -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
                             header,
                             jwk.toECKey().toECPublicKey());
-                    case "OKP" -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
+                    case OKP -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
                             header,
                             jwk.toOctetKeyPair().toPublicKey());
                     case null, default -> {
@@ -204,13 +218,14 @@ public class ClientService {
 
             // Verify the signature
             boolean verified = jwt.verify(verifier);
+
             if (verified) {
                 log.info("Client authenticated successfully with signature verification");
             } else {
                 log.warn("Client authentication failed: Invalid signature");
             }
-            return verified;
 
+            return verified;
         } catch (ParseException e) {
             log.error("Client authentication failed: Error parsing JWK or JWT", e);
             return false;
