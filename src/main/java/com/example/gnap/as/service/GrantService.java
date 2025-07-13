@@ -54,8 +54,8 @@ public class GrantService {
     @Transactional
     public GrantRequest processGrantRequest(GrantRequest request) {
         // Authenticate client if provided
-        Client client = null;
-        if (request.getClient() != null) {
+        Client client = request.getClient();
+        if (client != null) {
             if (!clientService.authenticateClient(request.getClient())) {
                 throw new IllegalArgumentException("Client authentication failed");
             }

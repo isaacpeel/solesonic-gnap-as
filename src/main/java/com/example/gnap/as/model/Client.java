@@ -53,8 +53,8 @@ public class Client {
     @JsonProperty("key")
     private transient Map<String, Object> key;
 
-    @JsonProperty("display")
-    private transient Display display;
+    @JsonIgnore
+    private transient ClientInformation clientInformation;
 
     public Client() {
     }
@@ -144,63 +144,24 @@ public class Client {
         this.key = key;
     }
 
-    public Display getDisplay() {
-        return display;
-    }
-
-    @SuppressWarnings("unused")
-    public void setDisplay(Display display) {
-        this.display = display;
+    /**
+     * Get the client information entity.
+     * This is a transient field that needs to be populated from the service layer.
+     *
+     * @return the client information entity
+     */
+    public ClientInformation getClientInformation() {
+        return clientInformation;
     }
 
     /**
-     * Inner class for client display information.
+     * Set the client information entity.
+     * This is a transient field that will not be persisted with the client.
+     *
+     * @param clientInformation the client information entity
      */
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class Display {
-        private String name;
-        private String uri;
-
-        @JsonProperty("logo_uri")
-        private String logoUri;
-
-        @SuppressWarnings("unused")
-        public Display() {
-        }
-
-        @SuppressWarnings("unused")
-        public Display(String name, String uri, String logoUri) {
-            this.name = name;
-            this.uri = uri;
-            this.logoUri = logoUri;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        @SuppressWarnings("unused")
-        public String getUri() {
-            return uri;
-        }
-
-        @SuppressWarnings("unused")
-        public void setUri(String uri) {
-            this.uri = uri;
-        }
-
-        @SuppressWarnings("unused")
-        public String getLogoUri() {
-            return logoUri;
-        }
-
-        @SuppressWarnings("unused")
-        public void setLogoUri(String logoUri) {
-            this.logoUri = logoUri;
-        }
+    public void setClientInformation(ClientInformation clientInformation) {
+        this.clientInformation = clientInformation;
     }
+
 }
