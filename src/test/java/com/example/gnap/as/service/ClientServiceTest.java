@@ -3,7 +3,6 @@ package com.example.gnap.as.service;
 import com.example.gnap.as.model.Client;
 import com.example.gnap.as.model.ClientInformation;
 import com.example.gnap.as.repository.ClientRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -34,7 +33,6 @@ class ClientServiceTest {
     @Mock
     private ClientInformationService clientInformationService;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private ClientService clientService;
 
     private RSAKey rsaJWK;

@@ -99,6 +99,7 @@ public class ClientService {
     /**
      * Update a client.
      */
+    @SuppressWarnings("unused")
     private void update(Client client) {
         clientRepository.save(client);
     }

@@ -32,8 +32,4 @@ public class ClientInformationService {
     public Optional<ClientInformation> findByClientId(UUID clientId) {
         return clientInformationRepository.findByClientId(clientId);
     }
-
-    public ClientInformation findById(UUID id) {
-        return clientInformationRepository.findById(id).orElse(null);
-    }
 }
