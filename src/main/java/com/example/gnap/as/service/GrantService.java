@@ -6,7 +6,6 @@ import com.example.gnap.as.model.Interaction;
 import com.example.gnap.as.model.Resource;
 import com.example.gnap.as.repository.GrantRequestRepository;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,9 +28,9 @@ public class GrantService {
 
     public GrantService(
             GrantRequestRepository grantRequestRepository,
-            @Lazy ClientService clientService,
-            @Lazy InteractionService interactionService,
-            @Lazy TokenService tokenService) {
+            ClientService clientService,
+            InteractionService interactionService,
+            TokenService tokenService) {
         this.grantRequestRepository = grantRequestRepository;
         this.clientService = clientService;
         this.interactionService = interactionService;

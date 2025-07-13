@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.ParseException;
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -94,8 +93,6 @@ public class ClientService {
      * @return the new client
      */
     private Client create(Client client) {
-        client.setCreatedAt(LocalDateTime.now());
-        client.setUpdatedAt(LocalDateTime.now());
         return clientRepository.save(client);
     }
 
@@ -103,7 +100,6 @@ public class ClientService {
      * Update a client.
      */
     private void update(Client client) {
-        client.setUpdatedAt(LocalDateTime.now());
         clientRepository.save(client);
     }
 

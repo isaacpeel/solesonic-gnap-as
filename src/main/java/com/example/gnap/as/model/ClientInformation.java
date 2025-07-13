@@ -45,12 +45,6 @@ public class ClientInformation {
     public ClientInformation() {
     }
 
-    public ClientInformation(String name, String uri, String logoUri) {
-        this.name = name;
-        this.uri = uri;
-        this.logoUri = logoUri;
-    }
-
     public UUID getId() {
         return id;
     }

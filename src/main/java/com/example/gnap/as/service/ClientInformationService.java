@@ -4,7 +4,6 @@ import com.example.gnap.as.model.ClientInformation;
 import com.example.gnap.as.repository.ClientInformationRepository;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,14 +17,11 @@ public class ClientInformationService {
     }
 
     public ClientInformation create(UUID clientId, ClientInformation clientInformation) {
-        clientInformation.setUpdatedAt(LocalDateTime.now());
-        clientInformation.setCreatedAt(LocalDateTime.now());
         clientInformation.setClientId(clientId);
         return clientInformationRepository.save(clientInformation);
     }
 
     public ClientInformation update(ClientInformation clientInformation) {
-        clientInformation.setUpdatedAt(LocalDateTime.now());
         return clientInformationRepository.save(clientInformation);
     }
 
