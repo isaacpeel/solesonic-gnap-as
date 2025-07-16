@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.ParseException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -98,10 +99,13 @@ public class ClientService {
 
     /**
      * Update a client.
+     * 
+     * @param client the client to update
+     * @return the updated client
      */
-    @SuppressWarnings("unused")
-    private void update(Client client) {
-        clientRepository.save(client);
+    @Transactional
+    public Client update(Client client) {
+        return clientRepository.save(client);
     }
 
     /**
@@ -246,5 +250,51 @@ public class ClientService {
 
         // Create a new client
         return create(client);
+    }
+
+    /**
+     * Find all clients.
+     *
+     * @return list of all clients
+     */
+    @Transactional(readOnly = true)
+    public List<Client> findAll() {
+        List<Client> clients = clientRepository.findAll();
+
+        // Populate client information for each client
+        clients.forEach(client -> {
+            UUID clientId = client.getId();
+            clientInformationService.findByClientId(clientId)
+                    .ifPresent(client::setClientInformation);
+        });
+
+        return clients;
+    }
+
+    /**
+     * Find a client by its ID.
+     *
+     * @param id the client ID
+     * @return the client if found
+     */
+    @Transactional(readOnly = true)
+    public Optional<Client> findById(UUID id) {
+        return clientRepository.findById(id)
+                .map(client -> {
+                    UUID clientId = client.getId();
+                    clientInformationService.findByClientId(clientId)
+                            .ifPresent(client::setClientInformation);
+                    return client;
+                });
+    }
+
+    /**
+     * Delete a client by its ID.
+     *
+     * @param id the client ID
+     */
+    @Transactional
+    public void deleteById(UUID id) {
+        clientRepository.deleteById(id);
     }
 }

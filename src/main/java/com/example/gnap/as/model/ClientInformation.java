@@ -84,4 +84,24 @@ public class ClientInformation {
     public void setLogoUri(String logoUri) {
         this.logoUri = logoUri;
     }
+
+    @SuppressWarnings("unused")
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    @SuppressWarnings("unused")
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    @SuppressWarnings("unused")
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    @SuppressWarnings("unused")
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }
