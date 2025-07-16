@@ -1,9 +1,8 @@
 package com.example.gnap.as.service;
 
 import com.example.gnap.as.model.Client;
+import com.example.gnap.as.model.ClientInformation;
 import com.example.gnap.as.repository.ClientRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.context.annotation.Lazy;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
@@ -16,8 +15,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.ParseException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 /**
  * Service for client management in the GNAP protocol.
@@ -27,12 +29,28 @@ public class ClientService {
 
     private static final Logger log = LoggerFactory.getLogger(ClientService.class);
 
-    private final ClientRepository clientRepository;
-    private final ObjectMapper objectMapper;
+    /**
+     * RSA key type for RSA-based cryptographic operations
+     */
+    public static final String RSA = "RSA";
 
-    public ClientService(ClientRepository clientRepository, @Lazy ObjectMapper objectMapper) {
+    /**
+     * EC key type for Elliptic Curve-based cryptographic operations
+     */
+    public static final String EC = "EC";
+
+    /**
+     * OKP key type for Octet Key Pair (Ed25519, Ed448, X25519, X448) cryptographic operations
+     */
+    public static final String OKP = "OKP";
+
+    private final ClientRepository clientRepository;
+    private final ClientInformationService clientInformationService;
+
+    public ClientService(ClientRepository clientRepository,
+                         ClientInformationService clientInformationService) {
         this.clientRepository = clientRepository;
-        this.objectMapper = objectMapper;
+        this.clientInformationService = clientInformationService;
     }
 
     /**
@@ -43,7 +61,13 @@ public class ClientService {
      */
     @Transactional(readOnly = true)
     public Optional<Client> findByInstanceId(UUID instanceId) {
-        return clientRepository.findByInstanceId(instanceId);
+        return clientRepository.findByInstanceId(instanceId)
+                .map(client -> {
+                    UUID clientId = client.getId();
+                    clientInformationService.findByClientId(clientId)
+                            .ifPresent(client::setClientInformation);
+                    return client;
+                });
     }
 
     /**
@@ -54,38 +78,13 @@ public class ClientService {
      */
     @Transactional(readOnly = true)
     public Optional<Client> findByKeyId(String keyId) {
-        return clientRepository.findByKeyId(keyId);
-    }
-
-    /**
-     * Register a new client or update an existing one.
-     *
-     * @param client the client information
-     * @return the registered client
-     */
-    @Transactional
-    public Client registerClient(Client client) {
-        // Check if client already exists by instance ID
-        Optional<Client> existingClient = Optional.empty();
-        if (client.getInstanceId() != null) {
-            existingClient = findByInstanceId(client.getInstanceId());
-        }
-
-        // Check if client exists by key ID
-        if (existingClient.isEmpty() && client.getKeyId() != null) {
-            existingClient = findByKeyId(client.getKeyId());
-        }
-
-        // Update existing client or create new one
-        Client clientToSave;
-        if (existingClient.isPresent()) {
-            clientToSave = existingClient.get();
-            updateClient(clientToSave, client);
-        } else {
-            clientToSave = createClient(client);
-        }
-
-        return clientRepository.save(clientToSave);
+        return clientRepository.findByKeyId(keyId)
+                .map(client -> {
+                    UUID clientId = client.getId();
+                    clientInformationService.findByClientId(clientId)
+                            .ifPresent(client::setClientInformation);
+                    return client;
+                });
     }
 
     /**
@@ -94,61 +93,47 @@ public class ClientService {
      * @param client the client information
      * @return the new client
      */
-    private Client createClient(Client client) {
-        Client newClient = new Client();
-        newClient.setId(UUID.randomUUID());
-        updateClient(newClient, client);
-        return newClient;
+    private Client create(Client client) {
+        return clientRepository.save(client);
     }
 
     /**
      * Update a client.
-     *
-     * @param clientToUpdate the client to update
-     * @param clientData the client data
+     * 
+     * @param client the client to update
+     * @return the updated client
      */
-    private void updateClient(Client clientToUpdate, Client clientData) {
-        clientToUpdate.setInstanceId(clientData.getInstanceId());
-        clientToUpdate.setKeyId(clientData.getKeyId());
-
-        // Store JWK as JSON string if present
-        if (clientData.getKey() != null) {
-            try {
-                clientToUpdate.setKeyJwk(objectMapper.writeValueAsString(clientData.getKey()));
-            } catch (Exception e) {
-                log.error("Error serializing JWK", e);
-            }
-        }
-
-        if (clientData.getDisplay() != null) {
-            clientToUpdate.setDisplayName(clientData.getDisplay().getName());
-        }
+    @Transactional
+    public Client update(Client client) {
+        return clientRepository.save(client);
     }
 
     /**
      * Authenticate a client based on its key.
      *
-     * @param client the client information
+     * @param client    the client information
      * @param signedJwt the signed JWT to verify (can be null if no signature verification is needed)
      * @return true if the client is authenticated, false otherwise
      */
     @Transactional(readOnly = true)
     public boolean authenticateClient(Client client, String signedJwt) {
-        // Check if client has a key ID
-        if (client.getKeyId() == null) {
+        // Check if a client has a key ID
+        String keyId = client.getKeyId();
+        if (isEmpty(keyId)) {
             log.warn("Client authentication failed: No key ID provided");
             return false;
         }
 
         // Find the client in the database
-        Optional<Client> storedClient = findByKeyId(client.getKeyId());
+        Optional<Client> storedClient = findByKeyId(keyId);
+
         if (storedClient.isEmpty()) {
-            log.warn("Client authentication failed: No client found with key ID {}", client.getKeyId());
+            log.warn("Client authentication failed: No client found with key ID {}", keyId);
             return false;
         }
 
         // If no signed JWT is provided, just check if the client exists
-        if (signedJwt == null || signedJwt.isEmpty()) {
+        if (isEmpty(signedJwt)) {
             log.info("Client authenticated by existence check only (no signature verification)");
             return true;
         }
@@ -157,7 +142,8 @@ public class ClientService {
         try {
             // Parse the stored JWK
             String keyJwk = storedClient.get().getKeyJwk();
-            if (keyJwk == null || keyJwk.isEmpty()) {
+
+            if (isEmpty(keyJwk)) {
                 log.warn("Client authentication failed: No JWK found for client with key ID {}", client.getKeyId());
                 return false;
             }
@@ -169,27 +155,28 @@ public class ClientService {
 
             // Verify that the JWT was signed with the key identified by the key ID
             JWSHeader header = jwt.getHeader();
+
             if (!client.getKeyId().equals(header.getKeyID())) {
-                log.warn("Client authentication failed: JWT key ID {} does not match client key ID {}", 
-                         header.getKeyID(), client.getKeyId());
+                log.warn("Client authentication failed: JWT key ID {} does not match client key ID {}", header.getKeyID(), client.getKeyId());
                 return false;
             }
 
             // Create a verifier for the JWK based on its type
             JWSVerifier verifier;
+
             try {
                 // Get the key type
                 String keyType = jwk.getKeyType().getValue();
 
                 // Create the appropriate verifier based on key type
                 switch (keyType) {
-                    case "RSA" -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
+                    case RSA -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
                             header,
                             jwk.toRSAKey().toRSAPublicKey());
-                    case "EC" -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
+                    case EC -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
                             header,
                             jwk.toECKey().toECPublicKey());
-                    case "OKP" -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
+                    case OKP -> verifier = new DefaultJWSVerifierFactory().createJWSVerifier(
                             header,
                             jwk.toOctetKeyPair().toPublicKey());
                     case null, default -> {
@@ -204,13 +191,14 @@ public class ClientService {
 
             // Verify the signature
             boolean verified = jwt.verify(verifier);
+
             if (verified) {
                 log.info("Client authenticated successfully with signature verification");
             } else {
                 log.warn("Client authentication failed: Invalid signature");
             }
-            return verified;
 
+            return verified;
         } catch (ParseException e) {
             log.error("Client authentication failed: Error parsing JWK or JWT", e);
             return false;
@@ -229,5 +217,84 @@ public class ClientService {
     @Transactional(readOnly = true)
     public boolean authenticateClient(Client client) {
         return authenticateClient(client, null);
+    }
+
+    /**
+     * Get the client information for a client.
+     *
+     * @param clientId the client ID
+     * @return the client information if found
+     */
+    @Transactional(readOnly = true)
+    public Optional<ClientInformation> clientInformation(UUID clientId) {
+        return clientInformationService.findByClientId(clientId);
+    }
+
+    /**
+     * Register a client from a grant request.
+     * If the client already exists (by key ID), return the existing client.
+     * Otherwise, create a new client.
+     *
+     * @param client the client information
+     * @return the registered client
+     */
+    @Transactional
+    public Client registerClient(Client client) {
+        // Check if client already exists by key ID
+        if (client.getKeyId() != null) {
+            Optional<Client> existingClient = findByKeyId(client.getKeyId());
+            if (existingClient.isPresent()) {
+                return existingClient.get();
+            }
+        }
+
+        // Create a new client
+        return create(client);
+    }
+
+    /**
+     * Find all clients.
+     *
+     * @return list of all clients
+     */
+    @Transactional(readOnly = true)
+    public List<Client> findAll() {
+        List<Client> clients = clientRepository.findAll();
+
+        // Populate client information for each client
+        clients.forEach(client -> {
+            UUID clientId = client.getId();
+            clientInformationService.findByClientId(clientId)
+                    .ifPresent(client::setClientInformation);
+        });
+
+        return clients;
+    }
+
+    /**
+     * Find a client by its ID.
+     *
+     * @param id the client ID
+     * @return the client if found
+     */
+    @Transactional(readOnly = true)
+    public Optional<Client> findById(UUID id) {
+        return clientRepository.findById(id)
+                .map(client -> {
+                    UUID clientId = client.getId();
+                    clientInformationService.findByClientId(clientId)
+                            .ifPresent(client::setClientInformation);
+                    return client;
+                });
+    }
+
+    /**
+     * Delete a client by its ID.
+     *
+     * @param id the client ID
+     */
+    @Transactional
+    public void deleteById(UUID id) {
+        clientRepository.deleteById(id);
     }
 }
