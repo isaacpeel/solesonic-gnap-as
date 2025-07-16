@@ -3,18 +3,12 @@ package com.example.gnap.as.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -59,14 +53,19 @@ public class Client {
     @JsonProperty("key")
     private transient Map<String, Object> key;
 
-    @JsonProperty("display")
-    private transient Display display;
+    @JsonIgnore
+    private transient ClientInformation clientInformation;
 
     public Client() {
     }
 
-    public Client(UUID id, UUID instanceId, String displayName, String keyId, String keyJwk, 
-                 LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public Client(UUID id,
+                  UUID instanceId,
+                  String displayName,
+                  String keyId,
+                  String keyJwk,
+                  LocalDateTime createdAt,
+                  LocalDateTime updatedAt) {
         this.id = id;
         this.instanceId = instanceId;
         this.displayName = displayName;
@@ -94,10 +93,6 @@ public class Client {
 
     public String getDisplayName() {
         return displayName;
-    }
-
-    public void setDisplayName(String displayName) {
-        this.displayName = displayName;
     }
 
     public String getKeyId() {
@@ -145,86 +140,24 @@ public class Client {
         this.key = key;
     }
 
-    public Display getDisplay() {
-        return display;
-    }
-
-    @SuppressWarnings("unused")
-    public void setDisplay(Display display) {
-        this.display = display;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Client client = (Client) o;
-        return Objects.equals(id, client.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
-
-    @Override
-    public String toString() {
-        return "Client{" +
-                "id=" + id +
-                ", instanceId='" + instanceId + '\'' +
-                ", displayName='" + displayName + '\'' +
-                ", keyId='" + keyId + '\'' +
-                '}';
+    /**
+     * Get the client information entity.
+     * This is a transient field that needs to be populated from the service layer.
+     *
+     * @return the client information entity
+     */
+    public ClientInformation getClientInformation() {
+        return clientInformation;
     }
 
     /**
-     * Inner class for client display information.
+     * Set the client information entity.
+     * This is a transient field that will not be persisted with the client.
+     *
+     * @param clientInformation the client information entity
      */
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public static class Display {
-        private String name;
-        private String uri;
-
-        @JsonProperty("logo_uri")
-        private String logoUri;
-
-        @SuppressWarnings("unused")
-        public Display() {
-        }
-
-        @SuppressWarnings("unused")
-        public Display(String name, String uri, String logoUri) {
-            this.name = name;
-            this.uri = uri;
-            this.logoUri = logoUri;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        @SuppressWarnings("unused")
-        public String getUri() {
-            return uri;
-        }
-
-        @SuppressWarnings("unused")
-        public void setUri(String uri) {
-            this.uri = uri;
-        }
-
-        @SuppressWarnings("unused")
-        public String getLogoUri() {
-            return logoUri;
-        }
-
-        @SuppressWarnings("unused")
-        public void setLogoUri(String logoUri) {
-            this.logoUri = logoUri;
-        }
+    public void setClientInformation(ClientInformation clientInformation) {
+        this.clientInformation = clientInformation;
     }
+
 }
